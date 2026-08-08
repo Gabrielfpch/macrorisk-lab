@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+.env
+.pytest_cache/
+.coverage
+
+# Generated Excel workbooks
+Requerimientos_Mantenimiento.xlsx
+*.xlsm
+~$*.xls*
+
+# Editors
+.vscode/
+.idea/
+*.swp
+
+# Operating systems
+.DS_Store
+Thumbs.db
