@@ -1,108 +1,79 @@
-# Maintenance Request Management System
+# MacroRisk Lab
 
-> Excel and VBA automation project for registering, validating, storing, and printing maintenance requests.
+**Interactive portfolio risk, macro scenario, and Monte Carlo simulator.**
 
-## Overview
+MacroRisk Lab turns a portfolio allocation into a transparent risk dashboard. It combines modern portfolio theory, parametric tail-risk measures, hypothetical macroeconomic shocks, and a seeded long-term simulation in a zero-dependency web application.
 
-This project implements a maintenance request management workflow in Microsoft Excel. A VBA UserForm captures request data, validates it, stores it in a structured worksheet, assigns a sequential request number, and generates an A4 printable form.
+## Why this project
 
-The workbook structure is generated with Python and `openpyxl`, while the operational workflow is handled with VBA.
+Most portfolio calculators show only historical returns or a single optimistic forecast. MacroRisk Lab is designed around a more useful question: **what can go wrong, what drives the result, and how wide is the range of possible outcomes?**
 
-## Key features
+## Features
 
-- Guided request entry through an Excel UserForm
-- Automatic request numbering (`MNTO1`, `MNTO2`, ...)
-- Structured storage across 13 standardized fields
-- Validation of required fields, dates, and Peruvian RUC format
-- Automatic provider and equipment reference data
-- A4 print-ready maintenance request form
-- Reusable Python setup script for the base workbook
-- Modular VBA code for easier maintenance
+- Custom allocation across seven asset classes
+- Balanced, growth, defensive, and inflation-hedged model portfolios
+- Expected return and covariance-based portfolio volatility
+- Sharpe ratio, 95% Value at Risk, and 95% Conditional Value at Risk
+- Diversification score based on effective positions and correlation benefit
+- Five transparent macroeconomic stress scenarios
+- Contribution analysis showing which assets drive each scenario result
+- Reproducible 2,000-path Monte Carlo projection with monthly contributions
+- Responsive interface with no frameworks, APIs, trackers, or paid services
+- Automated unit tests using Node's built-in test runner
 
-## Tech stack
+## Asset universe
 
-| Technology | Purpose |
-|---|---|
-| Microsoft Excel | User interface and data storage |
-| VBA | Form logic, validation, registration, and printing |
-| Python 3 | Reproducible workbook generation |
-| openpyxl | Workbook structure, styles, and reference sheets |
+| Asset class | Proxy | Portfolio role |
+|---|---|---|
+| Global equity | ACWI | Broad growth exposure |
+| US technology | QQQ | High-growth and duration-sensitive equity |
+| Treasury bonds | IEF | Duration and recession hedge |
+| Inflation-linked bonds | TIPS | Inflation protection |
+| Gold | GLD | Crisis and inflation diversifier |
+| Global REITs | REIT | Real assets and income |
+| Short Treasury | SGOV | Liquidity and capital stability |
 
-## Repository structure
+## Run locally
+
+No build step or dependencies are required.
+
+```bash
+python -m http.server 8000
+```
+
+Open `http://localhost:8000`.
+
+## Validate the model
+
+Node.js 20 or newer is recommended.
+
+```bash
+npm test
+npm run check
+```
+
+## Model overview
+
+Expected portfolio return is calculated as the weighted average of asset assumptions. Volatility is calculated from a seven-asset covariance matrix. Parametric VaR and CVaR use a 95% normal approximation. Scenario results are the weighted sum of explicit asset-level shocks. Long-term outcomes use monthly lognormal returns, recurring contributions, and a fixed seed so results remain reproducible.
+
+All assumptions are stored in [`src/finance.js`](src/finance.js) and can be audited or changed.
+
+## Project structure
 
 ```text
 .
-├── VBA/
-│   ├── frmRequerimiento.vba   # UserForm events and validation
-│   └── Module1.bas            # Workbook setup and helper macros
-├── setup_excel.py             # Generates the base .xlsx workbook
-├── requirements.txt           # Python dependency
-└── INSTRUCCIONES.md           # Detailed setup guide in Spanish
+├── index.html              # Semantic application interface
+├── styles.css              # Responsive visual system
+├── app.js                  # UI rendering and interaction
+├── src/finance.js          # Financial model and simulation engine
+├── tests/finance.test.mjs  # Unit tests for model behavior
+└── package.json            # Validation commands
 ```
 
-## Quick start
+## Built by
 
-### 1. Create the base workbook
+**Gabriel Pérez Chávez** — Economics student at Pontificia Universidad Católica del Perú (PUCP), interested in finance, investments, and automation.
 
-```bash
-python -m venv .venv
-```
+## Disclaimer
 
-Activate the environment:
-
-```bash
-# Windows
-.venv\Scripts\activate
-
-# macOS/Linux
-source .venv/bin/activate
-```
-
-Install the dependency and generate the workbook:
-
-```bash
-pip install -r requirements.txt
-python setup_excel.py
-```
-
-This creates `Requerimientos_Mantenimiento.xlsx`.
-
-### 2. Enable the VBA workflow
-
-1. Open the generated workbook in Microsoft Excel.
-2. Save it as an Excel Macro-Enabled Workbook (`.xlsm`).
-3. Open the Visual Basic Editor with `Alt + F11`.
-4. Import `VBA/Module1.bas`.
-5. Create the UserForm and add the controls listed in `INSTRUCCIONES.md`.
-6. Paste the contents of `VBA/frmRequerimiento.vba` into the form module.
-7. Run `ConfiguracionCompleta` and test the workflow.
-
-For the complete configuration and validation checklist, see [INSTRUCCIONES.md](INSTRUCCIONES.md).
-
-## Data validation
-
-The system checks:
-
-- Required selections for location, work type, product, and provider
-- RUC values with exactly 11 digits and a valid `10` or `20` prefix
-- Real calendar dates and valid day, month, and year ranges
-- Numeric-only input in date and RUC fields
-- Automatic and non-editable request identifiers
-
-## Skills demonstrated
-
-- Advanced Excel automation
-- VBA UserForms and event-driven programming
-- Input validation and error handling
-- Structured data registration
-- Python-based workbook generation
-- Technical documentation and reproducible setup
-
-## Project context
-
-Academic automation project developed for an Advanced Excel and Macros course at PUCP–INFOPUC. The provider records included in the project are sample data for educational use.
-
-## Author
-
-**Gabriel Pérez Chávez**  
-Economics student at Pontificia Universidad Católica del Perú (PUCP)
+This project is for educational and portfolio-demonstration purposes. Assumptions are illustrative, not live forecasts, and the outputs do not constitute investment advice.
