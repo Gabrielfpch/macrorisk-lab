@@ -6,8 +6,8 @@ const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Honora — Financial OS",
-  description: "Pricing intelligence, cash runway y control financiero para profesionales independientes.",
+  title: { default: "Honora — Financial OS", template: "%s · Honora" },
+  description: "Clientes, pricing, cobros y cash flow en un Financial OS para profesionales independientes.",
   other: { "codex-preview": "development" },
   icons: { icon: "/favicon.svg", shortcut: "/favicon.svg" },
 };

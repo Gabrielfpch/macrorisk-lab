@@ -1,76 +1,66 @@
 # Honora — Financial OS
 
-> **Tu talento factura. Tu caja decide.**
-
-Honora es un micro‑SaaS local-first para profesionales independientes. Convierte ingresos irregulares, costos, horas facturables y riesgo de clientes en una tarifa protegida, cash runway, stress tests y un plan financiero de 90 días.
-
-[![Product access](https://img.shields.io/badge/access-private-c8ff62?style=flat-square&labelColor=111612)](#privacidad)
-[![Model checks](https://github.com/Gabrielfpch/macrorisk-lab/actions/workflows/ci.yml/badge.svg)](https://github.com/Gabrielfpch/macrorisk-lab/actions/workflows/ci.yml)
-[![Privacy](https://img.shields.io/badge/privacy-local--first-1d704f?style=flat-square&labelColor=111612)](#privacidad)
-
-## El problema
-
-Muchos independientes saben cuánto facturan, pero no cuánto necesitan cobrar para cubrir costos, separar una reserva, proteger margen y absorber un mes débil. Honora convierte esas variables en una decisión clara sin exigir una cuenta, una tarjeta ni datos bancarios.
+Honora convierte clientes, pricing, cuentas por cobrar y caja en decisiones semanales para profesionales independientes. La versión 2 deja de ser una landing/calculadora aislada y funciona como un SaaS con cuenta, datos persistentes, límites de plan y billing preparado.
 
 ## Producto
 
-- `Pricing Intelligence`: calcula tarifa implícita, price floor y pricing gap.
-- `Cash Runway`: mide cuántos meses cubre la caja disponible.
-- `Revenue Risk`: analiza seis meses de ingresos, volatilidad y client concentration.
-- `Payment Drag`: estima cash in transit por demora de cobranza.
-- `Cash Stress Test`: simula Growth, Base, Slow month y Client loss.
-- `Honora Score`: combina salud operativa y estabilidad del revenue.
-- `90-Day Action Plan`: prioriza cuatro decisiones basadas en los números ingresados.
-- Persistencia local: los datos permanecen en el navegador del usuario.
+- Cuenta segura mediante Sign in with ChatGPT; Honora no administra contraseñas.
+- Workspace privado por usuario sobre Cloudflare D1.
+- Executive overview con revenue, accounts receivable, client concentration y Honora Score.
+- Collection Radar con vencimientos, overdue y conciliación de cobros.
+- Project Quote Builder con labor, external costs, contingency y target margin.
+- Rolling 13-week Cash Forecast.
+- Configuración financiera persistente.
+- Plan Free con límites aplicados en servidor y Honora Pro a S/ 29.90/mes para los primeros 100 clientes.
 
-## Modelo de ingresos
+## Rutas
 
-| Oferta | Precio | Función comercial |
-|---|---:|---|
-| Diagnóstico | S/ 0 | Adquisición y demostración de valor |
-| Decision Report | S/ 9.90 único | Primera conversión de bajo riesgo |
-| Honora Pro | S/ 19.90/mes | Recurring revenue |
-| Partner marketplace | Comisión acordada | Revenue por referidos relevantes |
+| Ruta | Función |
+|---|---|
+| `/` | Landing comercial |
+| `/demo` | Demo interactiva sin persistencia |
+| `/app` | Workspace autenticado |
+| `/api/dashboard` | Estado y configuración financiera |
+| `/api/clients` | Alta de clientes |
+| `/api/invoices` | Cuentas por cobrar y conciliación |
+| `/api/quotes` | Cotizaciones protegidas |
+| `/api/billing/checkout` | Redirección al checkout alojado |
+| `/api/billing/webhook` | Sincronización segura de suscripción |
 
-El plan completo, unit economics y métricas de validación están en [`docs/BUSINESS_PLAN.md`](docs/BUSINESS_PLAN.md).
+## Seguridad de pagos
 
-## Metodología
+El diseño usa Mercado Pago Subscriptions con checkout alojado. Honora nunca recibe ni almacena PAN, CVV o fecha de expiración. El webhook valida HMAC SHA-256 antes de consultar la suscripción por API y actualizar el plan.
 
-El motor está aislado en [`lib/honora.ts`](lib/honora.ts) y documentado en [`docs/METHODOLOGY.md`](docs/METHODOLOGY.md). Ningún resultado utiliza una tasa tributaria impuesta por el producto: `reserve rate` y `target margin` son parámetros configurables.
-
-## Ejecutar localmente
+Variables de producción, siempre como secretos del entorno y nunca en Git:
 
 ```bash
-npm ci
-npm run dev
+HONORA_CHECKOUT_URL=
+MERCADOPAGO_ACCESS_TOKEN=
+MERCADOPAGO_WEBHOOK_SECRET=
 ```
 
-Validar:
+Sin estas variables, el billing falla de forma segura con `BILLING_NOT_CONFIGURED`; no se muestra un pago ficticio.
+
+## Desarrollo y verificación
 
 ```bash
+npm run db:generate
 npm test
 npm run lint
 ```
 
-## Stack
+`npm test` compila el Worker, valida el artifact de Sites y ejecuta pruebas financieras, de render y del cierre seguro del checkout.
 
-- React 19 + TypeScript
-- Next.js/Vinext
-- Cloudflare-compatible Worker output
-- Node Test Runner
-- CSS responsive sin librerías visuales
-- Cero APIs externas en el motor financiero
+## Límites Free
 
-## Privacidad
+- 2 clientes
+- 5 accounts receivable
+- 1 project quote
 
-El MVP no tiene autenticación ni base de datos. Guarda el perfil financiero únicamente en `localStorage`. Los enlaces de early access llevan a una plantilla pública de GitHub que advierte no publicar información financiera ni datos de contacto privados.
+Los límites se comprueban en el servidor. Cambiar el estado visual del cliente no los evita.
 
-## Alcance
+## Nota responsable
 
-Honora es una herramienta educativa de planificación. No constituye asesoría financiera, tributaria, contable ni legal.
+Honora es una herramienta educativa de planificación financiera. No sustituye asesoría contable, tributaria, legal ni de inversión.
 
----
-
-Producto diseñado y desarrollado por **Gabriel Pérez Chávez**.
-
-Copyright © 2026. All rights reserved.
+Creado por Gabriel Pérez Chávez · Perú · 2026

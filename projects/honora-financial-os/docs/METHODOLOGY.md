@@ -1,71 +1,65 @@
-# Metodología cuantitativa
+# Honora Methodology
 
-## Core diagnostics
+## Principio
 
-Sea:
+Cada número debe terminar en una decisión: cuánto cobrar, qué cuenta perseguir, cuánta caja queda y qué cliente concentra el riesgo. Honora usa fórmulas visibles y supuestos configurables.
 
-- `R`: monthly revenue;
-- `F`: fixed costs;
-- `V`: variable costs;
-- `D`: debt payments;
-- `r`: configurable reserve rate;
-- `m`: target margin;
-- `H`: billable hours;
-- `C`: available cash.
-
-Entonces:
+## Protected hourly rate
 
 ```text
-Operating burn = F + V + D
-Reserve = R × r
-Free cash flow = R − Reserve − Operating burn
-Operating margin = Free cash flow / R
-Cash runway = C / Operating burn
-Current hourly rate = R / H
-Protected gross revenue = Operating burn / (1 − r − m)
-Recommended hourly rate = Protected gross revenue / H
+operating burn = fixed costs + variable costs + debt payments
+protected share = 1 - reserve rate - target margin
+required gross = operating burn / protected share
+protected hourly rate = required gross / billable hours
 ```
 
-Cuando `r + m` alcanza o supera 100%, el motor evita dividir entre cero y utiliza el operating burn como base conservadora.
+La reserva es una preferencia de planificación, no una tasa tributaria inferida.
 
-## Revenue risk
-
-La volatilidad utiliza seis observaciones mensuales:
+## Project Quote
 
 ```text
-Revenue volatility = standard deviation / average revenue
+labor cost = estimated hours × hourly rate
+direct cost = labor cost + external costs
+contingency = direct cost × contingency rate
+protected cost = direct cost + contingency
+quote total = protected cost / (1 - target margin)
 ```
 
-El `Revenue Stability Score` combina:
+El target margin se limita a 85% para evitar una división inestable. Los valores negativos se normalizan a cero.
 
-- 42% estabilidad de ingresos;
-- 36% client concentration;
-- 22% payment delay.
-
-Las funciones de score están acotadas entre 0 y 100. Los umbrales son supuestos de producto transparentes, no benchmarks regulatorios.
-
-## Honora Score
+## Client concentration
 
 ```text
-Honora Score = 62% Core Health + 38% Revenue Stability
+top client share = top client monthly revenue / total monthly revenue
 ```
 
-`Core Health` considera margin, runway y suficiencia de pricing. El score sirve para priorizar conversaciones; no representa probabilidad de default ni calificación crediticia.
+Una participación superior a 40% se trata como señal de concentración alta. No es una predicción de pérdida; es una alerta de dependencia.
 
-## Cash stress test
+## Accounts receivable
 
-Para un shock de revenue `s`:
+Una cuenta pendiente cuya fecha de vencimiento es anterior al día actual se reclasifica como `overdue`. `Cash in transit` suma cuentas pending y overdue; una conciliación `paid` deja de formar parte del forecast.
+
+## 13-week Cash Forecast
+
+El modelo abre cada semana con la caja de cierre anterior, reconoce las cuentas no pagadas en la semana de su vencimiento y descuenta `monthly fixed costs / 4.33`.
 
 ```text
-Stressed revenue = R × (1 + s)
-Stressed reserve = Stressed revenue × r
-Stressed free cash flow = Stressed revenue − Stressed reserve − Operating burn
+closing cash[w] = opening cash[w] + scheduled inflows[w] - weekly operating cost
+opening cash[w+1] = closing cash[w]
 ```
 
-Si el resultado es negativo:
+Señales:
 
-```text
-Defensive runway = Available cash / |Stressed free cash flow|
-```
+- `healthy`: closing cash cubre al menos dos semanas de operating cost.
+- `watch`: closing cash es positiva, pero inferior a dos semanas.
+- `critical`: closing cash es negativa.
 
-El test asume que costos y deuda permanecen constantes durante el shock. No es un forecast.
+Es un rolling forecast operativo, no un pronóstico estadístico ni una recomendación de inversión.
+
+## Billing integrity
+
+- Checkout alojado por Mercado Pago; Honora no toca datos de tarjeta.
+- URL de checkout restringida a dominios HTTPS de Mercado Pago.
+- Webhook validado con HMAC SHA-256 y comparación de tiempo constante.
+- El estado Pro solo cambia después de consultar la suscripción al proveedor.
+- Sin configuración de merchant, el endpoint devuelve 503 y no simula una compra.

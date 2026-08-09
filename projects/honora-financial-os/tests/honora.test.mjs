@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  buildThirteenWeekForecast,
   calculateDiagnostics,
   calculateHonoraScore,
+  calculateProjectQuote,
   calculateRevenueRisk,
   calculateScenario,
   generateActionPlan,
@@ -62,4 +64,25 @@ test("el plan entrega cuatro acciones concretas", () => {
   const actions = generateActionPlan(financials, diagnostics, stableRisk, revenueRisk);
   assert.equal(actions.length, 4);
   assert.ok(actions.every((action) => action.horizon && action.title && action.detail && action.impact));
+});
+
+test("el project quote protege costos, contingencia y margen", () => {
+  const quote = calculateProjectQuote({ hours: 40, hourlyRate: 80, externalCosts: 300, contingencyRate: 10, targetMargin: 25 });
+  assert.equal(quote.laborCost, 3200);
+  assert.equal(quote.directCost, 3500);
+  assert.equal(quote.contingency, 350);
+  assert.ok(quote.total > quote.protectedCost);
+  assert.ok(Math.abs(quote.total * .75 - quote.protectedCost) < .001);
+});
+
+test("el forecast de 13 semanas reconoce cobros por vencimiento", () => {
+  const start = new Date("2026-08-03T00:00:00Z");
+  const forecast = buildThirteenWeekForecast(1000, 100, [
+    { amount: 750, dueDate: "2026-08-05", status: "pending" },
+    { amount: 900, dueDate: "2026-08-06", status: "paid" },
+  ], start);
+  assert.equal(forecast.length, 13);
+  assert.equal(forecast[0].inflow, 750);
+  assert.equal(forecast[0].closingCash, 1650);
+  assert.equal(forecast[1].openingCash, 1650);
 });

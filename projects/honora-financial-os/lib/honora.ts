@@ -15,6 +15,20 @@ export type RiskInputs = {
   averagePaymentDelay: number;
 };
 
+export type ProjectQuoteInputs = {
+  hours: number;
+  hourlyRate: number;
+  externalCosts: number;
+  contingencyRate: number;
+  targetMargin: number;
+};
+
+export type ForecastInvoice = {
+  amount: number;
+  dueDate: string;
+  status: "pending" | "paid" | "overdue";
+};
+
 const clamp = (value: number, minimum: number, maximum: number) =>
   Math.min(maximum, Math.max(minimum, value));
 
@@ -80,6 +94,58 @@ export function calculateScenario(inputs: FinancialInputs, revenueShock: number)
   const monthlyGap = Math.max(0, -stressedFreeCashFlow);
   const survivalMonths = monthlyGap > 0 ? inputs.cashReserve / monthlyGap : Infinity;
   return { stressedIncome, stressedFreeCashFlow, monthlyGap, survivalMonths };
+}
+
+export function calculateProjectQuote(inputs: ProjectQuoteInputs) {
+  const laborCost = Math.max(0, inputs.hours) * Math.max(0, inputs.hourlyRate);
+  const externalCosts = Math.max(0, inputs.externalCosts);
+  const directCost = laborCost + externalCosts;
+  const contingency = directCost * (clamp(inputs.contingencyRate, 0, 100) / 100);
+  const protectedCost = directCost + contingency;
+  const marginRate = clamp(inputs.targetMargin, 0, 85) / 100;
+  const total = protectedCost / Math.max(0.15, 1 - marginRate);
+  const contribution = total - directCost;
+
+  return { laborCost, externalCosts, directCost, contingency, protectedCost, total, contribution, marginRate };
+}
+
+export function buildThirteenWeekForecast(
+  openingCash: number,
+  weeklyOperatingCost: number,
+  invoices: ForecastInvoice[],
+  startDate = new Date(),
+) {
+  const monday = new Date(startDate);
+  const day = monday.getUTCDay();
+  monday.setUTCDate(monday.getUTCDate() - ((day + 6) % 7));
+  monday.setUTCHours(0, 0, 0, 0);
+
+  let closingCash = Math.max(0, openingCash);
+  return Array.from({ length: 13 }, (_, index) => {
+    const weekStart = new Date(monday);
+    weekStart.setUTCDate(monday.getUTCDate() + index * 7);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setUTCDate(weekStart.getUTCDate() + 7);
+    const inflow = invoices
+      .filter((invoice) => invoice.status !== "paid")
+      .filter((invoice) => {
+        const due = new Date(`${invoice.dueDate}T00:00:00Z`);
+        return due >= weekStart && due < weekEnd;
+      })
+      .reduce((sum, invoice) => sum + Math.max(0, invoice.amount), 0);
+    const outflow = Math.max(0, weeklyOperatingCost);
+    const opening = closingCash;
+    closingCash = opening + inflow - outflow;
+    return {
+      week: index + 1,
+      startDate: weekStart.toISOString().slice(0, 10),
+      openingCash: opening,
+      inflow,
+      outflow,
+      closingCash,
+      risk: closingCash < 0 ? "critical" as const : closingCash < outflow * 2 ? "watch" as const : "healthy" as const,
+    };
+  });
 }
 
 export function generateActionPlan(
