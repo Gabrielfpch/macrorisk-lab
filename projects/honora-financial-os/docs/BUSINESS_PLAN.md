@@ -1,30 +1,30 @@
-# Honora — Business Plan v2
+# Honora — Business Plan v3
 
 ## Tesis comercial
 
-El profesional independiente no paga por “ver gráficos”. Paga por evitar tres pérdidas concretas: cotizar por debajo del margen, cobrar tarde y quedarse sin caja sin anticipación. Honora conecta esas decisiones en una rutina semanal.
+Un profesional independiente no paga por almacenar contactos ni por ver un dashboard. Paga por evitar tres pérdidas: leads sin respuesta, quotes sin margen y facturas sin cobrar. Honora controla ese ciclo completo y conecta cada decisión con su impacto en caja.
 
 ## Beachhead
 
-Profesionales independientes peruanos que facturan servicios de alto valor, trabajan con 2–10 clientes y administran cobros desde mensajes, bancos y hojas dispersas. Primer foco: consultores, marketers, diseñadores, desarrolladores y especialistas B2B.
+Profesionales independientes peruanos que venden servicios de S/ 800–10,000, trabajan con 2–15 clientes y hoy combinan WhatsApp, Google Forms, Sheets y documentos sueltos. Primer foco: consultores, marketers, diseñadores, desarrolladores y especialistas B2B.
+
+## Job to be done
+
+> Cuando llega una consulta, ayúdame a saber si vale la pena, responder a tiempo, cotizar sin regalar margen y cobrar sin perder el control de mi caja.
 
 ## Oferta
 
 | Plan | Precio | Job to be done |
 |---|---:|---|
-| Free | S/ 0 | Probar el workflow con 2 clientes, 5 cobros y 1 quote |
-| Pro Founding 100 | S/ 29.90/mes | Operar sin límites, forecast y risk signals |
-| Pro regular proyectado | S/ 39.90/mes | Precio después de validar retención y willingness to pay |
-
-El pago único y los referrals quedan fuera del MVP comercial. Introducir tres modelos a la vez diluye el aprendizaje; primero se debe validar la suscripción.
+| Free | S/ 0 | Validar el workflow con 10 leads activos, 2 clientes, 5 cobros, 1 quote y 5 preguntas Copilot/mes |
+| Pro Founding 100 | S/ 29.90/mes | Operar pipeline, Google Forms Bridge, Copilot y records sin límites |
+| Pro regular proyectado | S/ 49.90/mes | Precio posterior a validación de retención y willingness to pay |
 
 ## Value equation
 
-Un aumento protegido de S/ 300 en un solo project quote equivale a aproximadamente diez meses del plan fundador. El mensaje comercial debe demostrar ese retorno con números del propio usuario.
+Recuperar un lead de S/ 1,500 equivale a aproximadamente 50 meses del plan fundador. Proteger S/ 300 adicionales en un quote equivale a diez meses. El onboarding debe llevar al usuario a uno de esos momentos de valor durante la primera sesión.
 
 ## Unit economics inicial
-
-Supuesto conservador por cliente Pro:
 
 ```text
 MRR bruto                         S/ 29.90
@@ -33,30 +33,43 @@ infraestructura marginal          S/  0.60  objetivo
 contribution mensual              S/ 26.90  aproximado
 ```
 
-La comisión real debe sustituir este supuesto al activar el merchant account. Con presupuesto fundador de S/ 0–50/mes, la infraestructura serverless y adquisición manual mantienen bajo el burn inicial.
-
-## 30-day validation plan
-
-1. Entrevistar 10 independientes y reconstruir su último quote y último cobro tardío.
-2. Conseguir 5 usuarios que registren al menos dos clientes y una cuenta por cobrar.
-3. Observar si vuelven una segunda semana sin recordatorio del fundador.
-4. Ofrecer Founding 100 solo después de que el usuario vea un pricing leak o riesgo de caja real.
-5. Considerar señal de pago: 3 suscripciones reales o 20% de conversión entre usuarios activados.
+La comisión real debe reemplazar el supuesto al activar el merchant account. Con presupuesto fundador de S/ 0–50/mes, serverless, Fit Score determinístico y adquisición manual mantienen bajo el burn.
 
 ## Activation y retention
 
-- Activation: primer cliente + primer receivable + primer quote en una sesión.
-- Weekly habit: revisar Collection Radar y actualizar un estado de pago.
-- Value moment: detectar un quote subvaluado o una semana de caja crítica.
-- Retention proxy: dos semanas consecutivas con al menos una acción financiera.
+- **Activation:** primer lead capturado + primera next best action.
+- **Aha moment:** convertir un lead en cliente + quote sin volver a escribir datos.
+- **Weekly habit:** ejecutar al menos un Money Move.
+- **Value moment:** recuperar un lead, proteger margen o cobrar una factura overdue.
+- **Retention proxy:** dos semanas consecutivas con pipeline o collection actualizado.
 
-## Riesgos
+## North-star metric
 
-- Datos manuales: reducir el esfuerzo con defaults y selects; integrar bancos solo después de validar demanda.
-- Sensibilidad financiera: minimizar datos, separar por usuario y no almacenar tarjetas.
-- Confusión con asesoría: mantener metodología y disclaimer visibles.
-- Billing prematuro: el checkout no debe activarse sin merchant account, términos y prueba end-to-end.
+`revenue actions completed per active workspace per week`.
+
+Métricas secundarias: lead response time, lead-to-proposal rate, proposal-to-won rate, overdue amount recovered, second-week retention y Free-to-Pro conversion.
+
+## 30-day validation plan
+
+1. Reclutar 10 independientes con Google Forms, WhatsApp o Sheets en su proceso actual.
+2. Importar su pipeline real o publicar su Smart Intake.
+3. Conseguir 5 usuarios con al menos tres leads y un Money Move completado.
+4. Mostrar Founding 100 solo después de un value moment verificable.
+5. Señal de pago: 3 suscripciones reales o 20% de conversión entre usuarios activados.
+6. Señal de retención: 40% vuelve en la segunda semana sin recordatorio manual.
 
 ## Go-to-market inicial
 
-Founder-led sales: auditorías de pricing de 20 minutos, comunidades de freelancers y contenido basado en casos anonimizados. No invertir en ads hasta medir activation, second-week retention y willingness to pay.
+- Auditoría gratuita de 20 minutos: “¿dónde se pierde tu próximo S/ 1,000?”
+- Smart Intake como activo compartible en LinkedIn, WhatsApp y firmas de correo.
+- Migración concierge desde Google Forms / Sheets para reducir switching cost.
+- Casos anonimizados de quote leakage, lead response y collection recovery.
+- Sin ads hasta validar activation, second-week retention y willingness to pay.
+
+## Riesgos y controles
+
+- **Lead scoring injusto:** usar solo señales operativas transparentes; el humano decide.
+- **Formulario saturado en Free:** limitar leads activos y permitir liberar capacidad al cerrar oportunidades.
+- **Datos sensibles:** minimizar campos, separar workspaces y no almacenar tarjetas.
+- **IA genérica:** Copilot muestra evidencia y usa reglas verificables, sin inventar saldos.
+- **Billing prematuro:** no activar checkout sin merchant account, términos y prueba end-to-end.

@@ -9,6 +9,12 @@ import {
   calculateScenario,
   generateActionPlan,
 } from "../lib/honora.ts";
+import {
+  answerCopilot,
+  buildAutomationQueue,
+  parseGoogleFormsCsv,
+  scoreLead,
+} from "../lib/client-to-cash.ts";
 
 const financials = {
   monthlyIncome: 6500,
@@ -85,4 +91,43 @@ test("el forecast de 13 semanas reconoce cobros por vencimiento", () => {
   assert.equal(forecast[0].inflow, 750);
   assert.equal(forecast[0].closingCash, 1650);
   assert.equal(forecast[1].openingCash, 1650);
+});
+
+test("el Fit Score prioriza presupuesto, urgencia y claridad sin datos sensibles", () => {
+  const hot = scoreLead({ fullName: "Mariana", email: "m@example.com", phone: "999", business: "Altura", service: "Automatización", challenge: "Necesitamos automatizar el onboarding comercial, reducir horas manuales y medir cada conversión del pipeline.", budget: 6000, urgency: "7d" });
+  const nurture = scoreLead({ fullName: "Luis", email: "l@example.com", service: "Diseño", challenge: "Quiero información general.", budget: 200, urgency: "exploring" });
+  assert.ok(hot.score >= 78);
+  assert.ok(hot.score > nurture.score);
+  assert.match(hot.nextAction, /hoy/i);
+});
+
+test("Google Forms Bridge interpreta CSV con comas y campos entre comillas", () => {
+  const rows = parseGoogleFormsCsv('Marca temporal,Nombre,Email,Servicio,Necesidad,Presupuesto\n2026-08-09,"Ana Pérez",ana@example.com,Consultoría,"Ordenar pricing, ventas y caja","S/ 2,500"');
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].fullName, "Ana Pérez");
+  assert.equal(rows[0].budget, 2500);
+  assert.equal(rows[0].source, "google_forms_csv");
+});
+
+test("las automatizaciones ponen cobros vencidos y hot leads primero", () => {
+  const queue = buildAutomationQueue({
+    leads: [{ id: "l1", fullName: "Mariana", service: "Automation", budget: 6200, status: "new", score: 91, nextAction: "Responder hoy" }],
+    invoices: [{ clientName: "Páramo", description: "Sprint", amount: 1200, dueDate: "2026-08-01", status: "overdue" }],
+    quotes: [],
+    topClientShare: 20,
+  });
+  assert.equal(queue.length, 2);
+  assert.ok(queue.every((item) => item.priority === "high"));
+});
+
+test("Copilot responde con cifras trazables del workspace", () => {
+  const response = answerCopilot("¿Quién me debe dinero?", {
+    workspace: { businessName: "Studio", targetMargin: 25 },
+    leads: [], clients: [], quotes: [], automations: [],
+    invoices: [{ clientName: "Páramo", description: "Sprint", amount: 1200, dueDate: "2026-08-01", status: "overdue" }],
+    metrics: { monthlyIncome: 5000, accountsReceivable: 1200, overdueAmount: 1200, topClientShare: 0, projectedCash13w: 8000, protectedHourlyRate: 80, pipelineValue: 0 },
+  });
+  assert.match(response.answer, /Páramo/);
+  assert.match(response.answer, /1[,.]200/);
+  assert.ok(response.evidence.length > 0);
 });

@@ -17,6 +17,7 @@ export const workspaces = sqliteTable(
     id: text("id").primaryKey(),
     ownerId: text("owner_id").notNull().references(() => users.id, { onDelete: "cascade" }),
     businessName: text("business_name").notNull().default("Mi negocio"),
+    intakeSlug: text("intake_slug"),
     monthlyFixedCosts: real("monthly_fixed_costs").notNull().default(1800),
     reserveRate: real("reserve_rate").notNull().default(8),
     targetMargin: real("target_margin").notNull().default(25),
@@ -25,10 +26,42 @@ export const workspaces = sqliteTable(
     plan: text("plan", { enum: ["free", "pro"] }).notNull().default("free"),
     subscriptionStatus: text("subscription_status").notNull().default("inactive"),
     providerSubscriptionId: text("provider_subscription_id"),
+    copilotQuestionsUsed: integer("copilot_questions_used").notNull().default(0),
+    copilotPeriod: text("copilot_period"),
     createdAt: text("created_at").notNull(),
     updatedAt: text("updated_at").notNull(),
   },
-  (table) => [uniqueIndex("workspaces_owner_unique").on(table.ownerId)],
+  (table) => [
+    uniqueIndex("workspaces_owner_unique").on(table.ownerId),
+    uniqueIndex("workspaces_intake_slug_unique").on(table.intakeSlug),
+  ],
+);
+
+export const leads = sqliteTable(
+  "leads",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+    fullName: text("full_name").notNull(),
+    email: text("email").notNull(),
+    phone: text("phone"),
+    business: text("business"),
+    service: text("service").notNull(),
+    challenge: text("challenge").notNull(),
+    budget: real("budget").notNull().default(0),
+    urgency: text("urgency", { enum: ["7d", "30d", "90d", "exploring"] }).notNull().default("30d"),
+    source: text("source").notNull().default("honora_form"),
+    status: text("status", { enum: ["new", "qualified", "proposal", "won", "lost"] }).notNull().default("new"),
+    score: integer("score").notNull().default(0),
+    nextAction: text("next_action").notNull().default("Responder y validar encaje"),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => [
+    index("leads_workspace_idx").on(table.workspaceId),
+    index("leads_workspace_status_idx").on(table.workspaceId, table.status),
+    index("leads_workspace_email_idx").on(table.workspaceId, table.email),
+  ],
 );
 
 export const clients = sqliteTable(

@@ -1,37 +1,51 @@
-# Honora — Financial OS
+# Honora — Client-to-Cash OS
 
-Honora convierte clientes, pricing, cuentas por cobrar y caja en decisiones semanales para profesionales independientes. La versión 2 deja de ser una landing/calculadora aislada y funciona como un SaaS con cuenta, datos persistentes, límites de plan y billing preparado.
+Honora une captación, CRM, pricing, cobros y cash flow para profesionales independientes. Su trabajo no es mostrar más gráficos: es asegurar que cada consulta tenga un siguiente paso hasta convertirse en dinero cobrado.
 
 ## Producto
 
-- Cuenta segura mediante Sign in with ChatGPT; Honora no administra contraseñas.
-- Workspace privado por usuario sobre Cloudflare D1.
-- Executive overview con revenue, accounts receivable, client concentration y Honora Score.
-- Collection Radar con vencimientos, overdue y conciliación de cobros.
-- Project Quote Builder con labor, external costs, contingency y target margin.
-- Rolling 13-week Cash Forecast.
-- Configuración financiera persistente.
-- Plan Free con límites aplicados en servidor y Honora Pro a S/ 29.90/mes para los primeros 100 clientes.
+- **Smart Intake:** formulario compartible conectado directamente al Lead Inbox.
+- **Qualification Engine:** Fit Score explicable y next best action usando presupuesto, timing, claridad y contexto de contacto.
+- **Client-to-Cash Pipeline:** estados `new`, `qualified`, `proposal`, `won` y `lost`.
+- **One-click conversion:** un lead se convierte en cliente + protected quote sin volver a copiar datos.
+- **Google Forms Bridge:** importación CSV desde Google Sheets con mapeo bilingüe y auto-score.
+- **Honora Copilot:** asistente determinístico, basado en los datos del workspace y con evidencia visible.
+- **Money Moves:** acciones semanales derivadas de overdue invoices, hot leads, draft quotes y revenue concentration.
+- **Collection Radar, 13-week Cash Forecast y Client Economics.**
+- **Cuenta segura con Sign in with ChatGPT** y datos persistentes separados por usuario en Cloudflare D1.
 
 ## Rutas
 
 | Ruta | Función |
 |---|---|
-| `/` | Landing comercial |
-| `/demo` | Demo interactiva sin persistencia |
+| `/` | Landing comercial Client-to-Cash |
+| `/demo` | Demo interactiva y editable sin persistencia |
 | `/app` | Workspace autenticado |
-| `/api/dashboard` | Estado y configuración financiera |
-| `/api/clients` | Alta de clientes |
-| `/api/invoices` | Cuentas por cobrar y conciliación |
-| `/api/quotes` | Cotizaciones protegidas |
-| `/api/billing/checkout` | Redirección al checkout alojado |
-| `/api/billing/webhook` | Sincronización segura de suscripción |
+| `/intake/[slug]` | Smart Intake compartible |
+| `/api/leads` | Alta y avance de leads |
+| `/api/leads/convert` | Conversión a cliente + quote |
+| `/api/leads/import` | Google Forms / Sheets CSV Bridge |
+| `/api/copilot` | Respuestas contextuales con evidencia |
+| `/api/dashboard` | Command Center y configuración |
+| `/api/clients` | Client Economics |
+| `/api/invoices` | Collection Radar |
+| `/api/quotes` | Protected Quotes |
+| `/api/billing/*` | Checkout alojado y webhook de suscripción |
 
-## Seguridad de pagos
+## Planes y límites
 
-El diseño usa Mercado Pago Subscriptions con checkout alojado. Honora nunca recibe ni almacena PAN, CVV o fecha de expiración. El webhook valida HMAC SHA-256 antes de consultar la suscripción por API y actualizar el plan.
+Free permite 10 leads activos, 2 clientes, 5 accounts receivable, 1 quote y 5 preguntas Copilot por mes. Pro desbloquea records, Google Forms Bridge y Copilot sin límites. Los límites se comprueban en el servidor.
 
-Variables de producción, siempre como secretos del entorno y nunca en Git:
+## Seguridad
+
+- Cada consulta autenticada se limita al `workspace_id` del usuario.
+- El Smart Intake valida tamaño, campos, honeypot y envíos duplicados recientes.
+- Honora no usa datos demográficos o sensibles para calificar leads.
+- Mercado Pago procesa el checkout alojado; Honora no recibe PAN, CVV ni fecha de expiración.
+- El webhook valida HMAC SHA-256 antes de consultar la suscripción y cambiar el plan.
+- Sin credenciales de merchant, billing falla de forma segura con `BILLING_NOT_CONFIGURED`.
+
+Variables de billing, siempre como secretos del entorno:
 
 ```bash
 HONORA_CHECKOUT_URL=
@@ -39,28 +53,19 @@ MERCADOPAGO_ACCESS_TOKEN=
 MERCADOPAGO_WEBHOOK_SECRET=
 ```
 
-Sin estas variables, el billing falla de forma segura con `BILLING_NOT_CONFIGURED`; no se muestra un pago ficticio.
-
 ## Desarrollo y verificación
 
 ```bash
 npm run db:generate
-npm test
+npx tsc --noEmit
 npm run lint
+npm test
 ```
 
-`npm test` compila el Worker, valida el artifact de Sites y ejecuta pruebas financieras, de render y del cierre seguro del checkout.
-
-## Límites Free
-
-- 2 clientes
-- 5 accounts receivable
-- 1 project quote
-
-Los límites se comprueban en el servidor. Cambiar el estado visual del cliente no los evita.
+`npm test` compila el Worker, valida el artifact de Sites y ejecuta pruebas de modelos financieros, Fit Score, CSV Bridge, automations, Copilot, render y billing fail-closed.
 
 ## Nota responsable
 
-Honora es una herramienta educativa de planificación financiera. No sustituye asesoría contable, tributaria, legal ni de inversión.
+Honora es una herramienta de planificación operativa. No sustituye asesoría contable, tributaria, legal ni de inversión.
 
 Creado por Gabriel Pérez Chávez · Perú · 2026

@@ -1,114 +1,65 @@
 import Link from "next/link";
 
-const features = [
-  { n: "01", title: "Pricing Intelligence", copy: "Cotiza proyectos desde costos, contingency y target margin. Detecta cuánto dinero dejas sobre la mesa antes de enviar la propuesta." },
-  { n: "02", title: "Collection Radar", copy: "Ordena tus cuentas por cobrar, vencimientos y cash in transit. Convierte cobros dispersos en una rutina semanal." },
-  { n: "03", title: "13-week Cash Forecast", copy: "Proyecta entradas, operating burn y caja de cierre durante 13 semanas para anticipar problemas, no explicarlos después." },
-  { n: "04", title: "Client Economics", copy: "Mide revenue concentration y calidad de cartera. Identifica qué cliente sostiene el negocio y cuál aumenta tu riesgo." },
+const workflow = [
+  { n: "01", title: "Smart Intake", copy: "Comparte un formulario profesional. Cada respuesta llega al Lead Inbox con contexto, presupuesto y timing." },
+  { n: "02", title: "Qualification Engine", copy: "Prioriza oportunidades por fit operativo y recibe una next best action sin revisar otra hoja." },
+  { n: "03", title: "Protected Quotes", copy: "Convierte un lead en cliente + quote, protegiendo labor, contingency y target margin." },
+  { n: "04", title: "Collection Radar", copy: "Ordena accounts receivable, vencimientos y recordatorios para convertir trabajo entregado en caja." },
+  { n: "05", title: "13-week Cash", copy: "Mira cómo pipeline y cobros impactan tu liquidez antes de asumir nuevos costos." },
 ];
 
 export default function Home() {
-  return (
-    <main className="marketing-page">
-      <header className="marketing-nav">
-        <Link className="brand-lockup" href="/" aria-label="Honora, inicio">
-          <span className="brand-mark">H</span>
-          <span><strong>HONORA</strong><small>FINANCIAL OS</small></span>
-        </Link>
-        <nav aria-label="Navegación principal">
-          <a href="#producto">Producto</a>
-          <a href="#metodo">Método</a>
-          <a href="#precio">Precio</a>
-        </nav>
-        <Link className="button button-dark button-small" href="/app">Crear cuenta <span>↗</span></Link>
-      </header>
+  return <main className="marketing-page ctc-marketing">
+    <header className="marketing-nav">
+      <Link className="brand-lockup" href="/" aria-label="Honora, inicio"><span className="brand-mark">H</span><span><strong>HONORA</strong><small>CLIENT-TO-CASH OS</small></span></Link>
+      <nav aria-label="Navegación principal"><a href="#flujo">Producto</a><a href="#copilot">Copilot</a><a href="#integraciones">Conexiones</a><a href="#precio">Precio</a></nav>
+      <Link className="button button-dark button-small" href="/app">Crear cuenta <span>↗</span></Link>
+    </header>
 
-      <section className="marketing-hero">
-        <div className="hero-copy-v2">
-          <div className="eyebrow"><i /> Built for independents · Perú</div>
-          <h1>Deja de facturar<br />a ciegas. <em>Opera con margen.</em></h1>
-          <p>El Financial OS que conecta clientes, pricing, cobros y cash flow para que tu talento también se convierta en un negocio rentable.</p>
-          <div className="hero-buttons">
-            <Link className="button button-accent" href="/app">Crear mi workspace <span>→</span></Link>
-            <Link className="text-link" href="/demo">Abrir demo interactiva <span>↗</span></Link>
+    <section className="marketing-hero ctc-hero">
+      <div className="hero-copy-v2">
+        <div className="eyebrow"><i /> Client-to-Cash OS · Built in Peru</div>
+        <h1>De una consulta<br />a <em>dinero cobrado.</em></h1>
+        <p>Honora convierte formularios, leads, propuestas y cobros en un solo sistema para profesionales independientes que quieren vender con método y operar con margen.</p>
+        <div className="hero-buttons"><Link className="button button-accent" href="/app">Crear mi pipeline <span>→</span></Link><Link className="text-link" href="/demo">Probar demo interactiva <span>↗</span></Link></div>
+        <div className="hero-trust"><span><b>✓</b> Plan Free sin tarjeta</span><span><b>✓</b> Base de datos persistente</span><span><b>✓</b> Workspace privado</span></div>
+      </div>
+
+      <div className="hero-console ctc-console" aria-label="Vista previa del Client-to-Cash Command Center">
+        <div className="console-top"><span><i /><i /><i /></span><small>honora / client-to-cash command center</small><b>LIVE</b></div>
+        <div className="ctc-console-body">
+          <div className="ctc-console-head"><div><small>OPEN PIPELINE</small><strong>S/ 16,812</strong></div><span>3 oportunidades activas</span></div>
+          <div className="ctc-stages">{[{ n: 3, t: "Nuevos" }, { n: 1, t: "Calificados" }, { n: 2, t: "Propuesta" }, { n: 1, t: "Ganados" }].map((stage, index) => <div key={stage.t}><small>0{index + 1}</small><strong>{stage.n}</strong><span>{stage.t}</span>{index < 3 && <i>→</i>}</div>)}</div>
+          <div className="ctc-console-grid">
+            <article className="hot-lead-card"><div><span>91</span><small>HOT LEAD</small></div><h3>Mariana Torres</h3><p>Automatización · S/ 6,200</p><footer><span>Responder hoy</span><b>→</b></footer></article>
+            <article className="money-moves-card"><small>MONEY MOVES · TODAY</small><div><b>$</b><p><strong>Cobrar S/ 1,200</strong><span>Páramo Digital · 4 días overdue</span></p></div><div><b>✦</b><p><strong>Agendar discovery call</strong><span>Fit 91/100 · esta semana</span></p></div></article>
           </div>
-          <div className="hero-trust">
-            <span><b>✓</b> Cuenta segura con ChatGPT</span>
-            <span><b>✓</b> Plan Free sin tarjeta</span>
-            <span><b>✓</b> Datos separados por usuario</span>
-          </div>
+          <div className="ctc-copilot-bar"><b>H</b><p><small>HONORA COPILOT</small><strong>“¿Qué lead debo responder primero?”</strong></p><span>Preguntar →</span></div>
         </div>
+      </div>
+    </section>
 
-        <div className="hero-console" aria-label="Vista previa de Honora">
-          <div className="console-top"><span><i /><i /><i /></span><small>honora / executive overview</small><b>LIVE</b></div>
-          <div className="console-body">
-            <aside className="console-nav">
-              <span className="mini-brand">H</span>
-              {["⌁", "◎", "◫", "◇", "⚙"].map((icon, index) => <i className={index === 0 ? "active" : ""} key={icon}>{icon}</i>)}
-            </aside>
-            <div className="console-main">
-              <div className="console-heading"><div><small>BUENOS DÍAS, GABRIEL</small><h2>Tu negocio, en control.</h2></div><span>AGOSTO 2026</span></div>
-              <div className="console-kpis">
-                <article><small>REVENUE / MES</small><strong>S/ 8,900</strong><em>+12.4% ↗</em></article>
-                <article><small>ACCOUNTS RECEIVABLE</small><strong>S/ 4,750</strong><em className="amber">S/ 1,200 overdue</em></article>
-                <article><small>13W CASH</small><strong>S/ 14,820</strong><em>healthy runway</em></article>
-              </div>
-              <div className="console-grid">
-                <article className="forecast-card">
-                  <div><small>13-WEEK CASH FORECAST</small><b>+ S/ 6,320</b></div>
-                  <div className="forecast-bars" aria-hidden="true">
-                    {[32, 39, 35, 48, 52, 46, 61, 58, 70, 76, 73, 84, 91].map((height, index) => <i key={index} style={{ height: `${height}%` }} />)}
-                  </div>
-                  <div className="chart-axis"><span>W01</span><span>W07</span><span>W13</span></div>
-                </article>
-                <article className="signal-card">
-                  <small>PRICING SIGNAL</small><strong>+18%</strong><h3>Tu último quote está subvaluado.</h3><p>Protege S/ 860 adicionales sin cambiar el scope.</p><span>RECALCULAR →</span>
-                </article>
-              </div>
-              <div className="console-alert"><b>!</b><p><small>COLLECTION RADAR</small><strong>2 cobros necesitan acción esta semana.</strong></p><span>Ver prioridades →</span></div>
-            </div>
-          </div>
-        </div>
-      </section>
+    <section className="ctc-proof-strip"><div><strong>1</strong><span>formulario compartible</span></div><i>→</i><div><strong>1</strong><span>pipeline priorizado</span></div><i>→</i><div><strong>1</strong><span>quote con margen</span></div><i>→</i><div><strong>1</strong><span>cobro en caja</span></div></section>
 
-      <section className="ticker" aria-label="Capacidades">
-        <span>PRICING INTELLIGENCE</span><i>✦</i><span>COLLECTION RADAR</span><i>✦</i><span>13-WEEK CASH FORECAST</span><i>✦</i><span>CLIENT ECONOMICS</span>
-      </section>
+    <section className="ctc-workflow-section" id="flujo">
+      <div className="section-kicker">ONE REVENUE WORKFLOW</div>
+      <div className="problem-heading"><h2>Tu cliente no debería perderse<br /><em>entre cinco herramientas.</em></h2><p>El valor no está en almacenar contactos. Está en hacer avanzar cada oportunidad hasta un cobro, con contexto financiero en cada decisión.</p></div>
+      <div className="ctc-workflow-grid">{workflow.map((item) => <article key={item.n}><span>{item.n}</span><div>{item.n === "01" ? "↳" : item.n === "02" ? "✦" : item.n === "03" ? "◇" : item.n === "04" ? "$" : "∿"}</div><h3>{item.title}</h3><p>{item.copy}</p></article>)}</div>
+    </section>
 
-      <section className="problem-section" id="producto">
-        <div className="section-kicker">THE INDEPENDENT BUSINESS GAP</div>
-        <div className="problem-heading"><h2>No necesitas otra hoja de cálculo.<br /><em>Necesitas decisiones conectadas.</em></h2><p>Honora convierte los movimientos diarios de un profesional independiente en señales concretas de precio, cobro y caja.</p></div>
-        <div className="feature-grid">
-          {features.map((feature) => <article key={feature.n}><span>{feature.n}</span><div className="feature-icon">{feature.n === "01" ? "↗" : feature.n === "02" ? "◎" : feature.n === "03" ? "⌁" : "◇"}</div><h3>{feature.title}</h3><p>{feature.copy}</p></article>)}
-        </div>
-      </section>
+    <section className="copilot-section" id="copilot">
+      <div className="copilot-marketing-copy"><span>DATA-GROUNDED ASSISTANT</span><h2>Un bot general responde.<br /><em>Honora decide contigo.</em></h2><p>Copilot no inventa consejos genéricos: usa tu Lead Inbox, protected rate, accounts receivable y 13-week Cash Forecast. Cada respuesta muestra la evidencia y una next best action.</p><ul><li>¿Quién me debe dinero hoy?</li><li>¿Cuánto debería cobrar por este proyecto?</li><li>¿Qué lead tiene mayor fit?</li><li>¿Qué hago esta semana para proteger caja?</li></ul><Link className="button button-light" href="/demo">Probar Copilot <span>→</span></Link></div>
+      <div className="copilot-marketing-card"><header><b>H</b><span>HONORA COPILOT</span><small>GROUNDED IN YOUR DATA</small></header><div className="user-question">¿Qué hago primero esta semana?</div><div className="assistant-reply"><small>NEXT BEST ACTION</small><h3>Cobra S/ 1,200 a Páramo Digital hoy.</h3><p>Es la acción con mayor impacto inmediato en caja. La factura lleva 4 días vencida.</p><div><span>EVIDENCIA</span><b>S/ 4,750 receivable</b><b>S/ 1,200 overdue</b></div></div><footer>Pregunta sobre ventas, precios, cobros o caja… <b>→</b></footer></div>
+    </section>
 
-      <section className="method-section" id="metodo">
-        <div className="method-copy"><span>HONORA DECISION LOOP</span><h2>Cada dato debe terminar<br />en una <em>acción rentable.</em></h2><p>Honora no pretende reemplazar a un contador. Su trabajo es darte visibilidad operativa entre una factura y la siguiente.</p><Link className="button button-light" href="/demo">Explorar el sistema <span>→</span></Link></div>
-        <div className="decision-loop">
-          <div className="loop-center"><span>H</span><small>DECISION<br />ENGINE</small></div>
-          <article className="loop-one"><b>01</b><span>REGISTRA</span><small>Clientes y cobros</small></article>
-          <article className="loop-two"><b>02</b><span>CALCULA</span><small>Margin y runway</small></article>
-          <article className="loop-three"><b>03</b><span>PRIORIZA</span><small>Pricing y collection</small></article>
-          <article className="loop-four"><b>04</b><span>DECIDE</span><small>Con anticipación</small></article>
-        </div>
-      </section>
+    <section className="connection-section" id="integraciones"><div className="connection-head"><span>CONNECTED, NOT COMPLICATED</span><h2>Todo llega al mismo lugar.</h2><p>Empieza sin gastar en infraestructura ni pegar datos manualmente.</p></div><div className="connection-grid"><article><b>GF</b><h3>Google Forms Bridge</h3><p>Importa respuestas desde Google Sheets en CSV y conviértelas automáticamente en leads calificados.</p><span>IMPORT + AUTO-SCORE</span></article><article><b>H</b><h3>Smart Intake nativo</h3><p>Comparte tu propio formulario y recibe nuevos leads directamente en el pipeline.</p><span>NO COPY / PASTE</span></article><article><b>DB</b><h3>Persistent Workspace</h3><p>Leads, clientes, quotes y cobros viven en una base de datos separada por usuario.</p><span>D1 DATABASE</span></article><article><b>MP</b><h3>Hosted Checkout</h3><p>Arquitectura preparada para activar suscripciones con Mercado Pago sin guardar datos de tarjeta.</p><span>PAYMENT-READY</span></article></div></section>
 
-      <section className="pricing-section-v2" id="precio">
-        <div className="pricing-intro"><span>SIMPLE PRICING</span><h2>Si Honora no protege más de S/ 29.90,<br /><em>no merece tu suscripción.</em></h2><p>Empieza gratis. Paga cuando necesites operar sin límites y convertir el sistema en una rutina semanal.</p></div>
-        <div className="pricing-cards-v2">
-          <article><div><span>FREE</span><small>Para ordenar el negocio</small></div><strong>S/ 0</strong><ul><li>2 clientes activos</li><li>5 accounts receivable</li><li>1 project quote</li><li>Executive dashboard</li></ul><Link className="button button-outline" href="/app">Empezar gratis →</Link></article>
-          <article className="founder-plan"><div className="popular-label">FOUNDING 100</div><div><span>PRO</span><small>Para operar con control</small></div><strong>S/ 29.90<small>/ mes</small></strong><ul><li>Clientes y cobros ilimitados</li><li>Pricing leak detection</li><li>13-week cash forecast</li><li>Historial y workspace persistente</li><li>Client concentration alerts</li></ul><Link className="button button-accent" href="/app">Crear cuenta Pro →</Link><p>Precio fundador reservado para los primeros 100 clientes.</p></article>
-        </div>
-      </section>
+    <section className="pricing-section-v2 ctc-pricing" id="precio">
+      <div className="pricing-intro"><span>PRICE FOR OUTCOME</span><h2>Si Honora no recupera una oportunidad,<br /><em>no merece tu suscripción.</em></h2><p>Empieza gratis. Paga cuando tu pipeline necesite operar sin límites.</p></div>
+      <div className="pricing-cards-v2"><article><div><span>FREE</span><small>Para validar el sistema</small></div><strong>S/ 0</strong><ul><li>1 Smart Intake</li><li>10 leads activos + Fit Score</li><li>2 clientes y 5 receivables</li><li>1 protected quote</li><li>5 preguntas Copilot / mes</li></ul><Link className="button button-outline" href="/app">Empezar gratis →</Link></article><article className="founder-plan"><div className="popular-label">FOUNDING 100</div><div><span>PRO</span><small>Para operar y vender</small></div><strong>S/ 29.90<small>/ mes</small></strong><ul><li>Pipeline y records ilimitados</li><li>Google Forms Bridge</li><li>Honora Copilot ilimitado</li><li>Pricing + Collection Engine</li><li>13-week Cash Forecast</li></ul><Link className="button button-accent" href="/app">Reservar precio fundador →</Link><p>Precio regular proyectado: S/ 49.90. Checkout sujeto a activación comercial.</p></article></div>
+    </section>
 
-      <section className="founder-note"><span>BUILT IN PERU</span><blockquote>“Un profesional independiente no debería descubrir que cobró mal cuando ya terminó el trabajo.”</blockquote><p>— Gabriel Pérez Chávez, creador de Honora</p></section>
-
-      <footer className="marketing-footer">
-        <Link className="brand-lockup footer-lockup" href="/"><span className="brand-mark">H</span><span><strong>HONORA</strong><small>FINANCIAL OS</small></span></Link>
-        <p>Financial clarity for independent work.</p>
-        <span>© 2026 Gabriel Pérez Chávez</span>
-      </footer>
-    </main>
-  );
+    <section className="founder-note"><span>BUILT IN PERU</span><blockquote>“Un negocio independiente no pierde dinero por falta de talento; lo pierde cuando una oportunidad no tiene siguiente paso.”</blockquote><p>— Gabriel Pérez Chávez, creador de Honora</p></section>
+    <footer className="marketing-footer"><Link className="brand-lockup footer-lockup" href="/"><span className="brand-mark">H</span><span><strong>HONORA</strong><small>CLIENT-TO-CASH OS</small></span></Link><p>Capture. Quote. Collect. Grow.</p><span>© 2026 Gabriel Pérez Chávez</span></footer>
+  </main>;
 }

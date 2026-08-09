@@ -2,24 +2,30 @@
 
 import Link from "next/link";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { answerCopilot, parseGoogleFormsCsv, scoreLead } from "../../lib/client-to-cash";
 import { buildThirteenWeekForecast, calculateProjectQuote } from "../../lib/honora";
 
+type Lead = { id: string; fullName: string; email: string; phone: string | null; business: string | null; service: string; challenge: string; budget: number; urgency: "7d" | "30d" | "90d" | "exploring"; source: string; status: "new" | "qualified" | "proposal" | "won" | "lost"; score: number; nextAction: string; createdAt: string; updatedAt: string };
 type Client = { id: string; name: string; email: string | null; monthlyRevenue: number; paymentTermsDays: number; status: "active" | "paused"; createdAt: string };
 type Invoice = { id: string; clientId: string | null; clientName: string; description: string; amount: number; dueDate: string; status: "pending" | "paid" | "overdue"; issuedAt: string; paidAt: string | null };
 type Quote = { id: string; clientName: string; projectName: string; hours: number; hourlyRate: number; externalCosts: number; contingencyRate: number; targetMargin: number; total: number; status: "draft" | "sent" | "accepted"; createdAt: string };
 type ForecastWeek = { week: number; startDate: string; openingCash: number; inflow: number; outflow: number; closingCash: number; risk: "healthy" | "watch" | "critical" };
+type Automation = { id: string; priority: "high" | "medium" | "low"; kind: "collection" | "lead" | "proposal" | "risk"; title: string; detail: string; action: string; value: number };
+type CopilotResponse = { intent: string; answer: string; evidence: string[]; next: string };
 type DashboardData = {
   user: { name: string; email: string };
-  workspace: { id: string; businessName: string; monthlyFixedCosts: number; reserveRate: number; targetMargin: number; cashReserve: number; billableHours: number; plan: "free" | "pro"; subscriptionStatus: string };
+  workspace: { id: string; businessName: string; intakeSlug: string | null; monthlyFixedCosts: number; reserveRate: number; targetMargin: number; cashReserve: number; billableHours: number; plan: "free" | "pro"; subscriptionStatus: string; copilotQuestionsUsed: number; copilotPeriod: string | null };
+  leads: Lead[];
   clients: Client[];
   invoices: Invoice[];
   quotes: Quote[];
-  metrics: { monthlyIncome: number; accountsReceivable: number; overdueAmount: number; topClientShare: number; projectedCash13w: number; honoraScore: number; protectedHourlyRate: number };
+  metrics: { monthlyIncome: number; accountsReceivable: number; overdueAmount: number; topClientShare: number; projectedCash13w: number; honoraScore: number; protectedHourlyRate: number; pipelineValue: number; leadConversionRate: number };
   forecast: ForecastWeek[];
-  limits: { clients: number; invoices: number; quotes: number };
+  automations: Automation[];
+  limits: { leads: number; clients: number; invoices: number; quotes: number };
 };
 
-type Tab = "overview" | "cashflow" | "clients" | "collections" | "quotes" | "billing" | "settings";
+type Tab = "overview" | "leads" | "quotes" | "collections" | "cashflow" | "clients" | "copilot" | "billing" | "settings";
 
 const money = new Intl.NumberFormat("es-PE", { style: "currency", currency: "PEN", maximumFractionDigits: 0 });
 const exactMoney = new Intl.NumberFormat("es-PE", { style: "currency", currency: "PEN", maximumFractionDigits: 2 });
@@ -28,6 +34,11 @@ const dateFromNow = (days: number) => { const date = new Date(); date.setUTCDate
 const demoId = () => `demo-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
 
 function createDemoData(): DashboardData {
+  const leads: Lead[] = [
+    { id: "l1", fullName: "Mariana Torres", email: "mariana@alturalabs.pe", phone: "+51 987 123 456", business: "Altura Labs", service: "Automatización / tecnología", challenge: "Necesitamos automatizar el onboarding de clientes y reducir tareas manuales del equipo comercial.", budget: 6200, urgency: "7d", source: "honora_form", status: "new", score: 91, nextAction: "Responder hoy y agendar discovery call", createdAt: dateFromNow(-1), updatedAt: dateFromNow(-1) },
+    { id: "l2", fullName: "Diego Salazar", email: "diego@norte.pe", phone: null, business: "Norte Arquitectura", service: "Estrategia / consultoría", challenge: "Buscamos ordenar pricing y propuesta de valor para una nueva línea B2B.", budget: 3200, urgency: "30d", source: "google_forms_csv", status: "qualified", score: 73, nextAction: "Validar alcance y presupuesto en 48 horas", createdAt: dateFromNow(-3), updatedAt: dateFromNow(-2) },
+    { id: "l3", fullName: "Valeria Ruiz", email: "valeria@example.com", phone: null, business: null, service: "Diseño / branding", challenge: "Quiero actualizar la identidad de mi marca personal.", budget: 900, urgency: "90d", source: "manual", status: "new", score: 49, nextAction: "Enviar recurso útil y mantener en seguimiento", createdAt: dateFromNow(-2), updatedAt: dateFromNow(-2) },
+  ];
   const clients: Client[] = [
     { id: "c1", name: "Estudio Norte", email: "finanzas@estudionorte.pe", monthlyRevenue: 3900, paymentTermsDays: 30, status: "active", createdAt: new Date().toISOString() },
     { id: "c2", name: "Páramo Digital", email: "hola@paramo.pe", monthlyRevenue: 2800, paymentTermsDays: 15, status: "active", createdAt: new Date().toISOString() },
@@ -41,19 +52,29 @@ function createDemoData(): DashboardData {
   const forecast = buildThirteenWeekForecast(8500, 710, invoices);
   return {
     user: { name: "Gabriel Pérez Chávez", email: "demo@honora.pe" },
-    workspace: { id: "demo", businessName: "Gabriel Independent Studio", monthlyFixedCosts: 3075, reserveRate: 8, targetMargin: 25, cashReserve: 8500, billableHours: 80, plan: "pro", subscriptionStatus: "demo" },
-    clients, invoices,
+    workspace: { id: "demo", businessName: "Gabriel Independent Studio", intakeSlug: "gabriel-studio", monthlyFixedCosts: 3075, reserveRate: 8, targetMargin: 25, cashReserve: 8500, billableHours: 80, plan: "pro", subscriptionStatus: "demo", copilotQuestionsUsed: 0, copilotPeriod: null },
+    leads, clients, invoices,
     quotes: [{ id: "q1", clientName: "Altura Labs", projectName: "Go-to-market sprint", hours: 42, hourlyRate: 95, externalCosts: 450, contingencyRate: 10, targetMargin: 25, total: 6512, status: "draft", createdAt: new Date().toISOString() }],
-    metrics: { monthlyIncome: 8900, accountsReceivable: 4750, overdueAmount: 1200, topClientShare: 43.8, projectedCash13w: forecast.at(-1)?.closingCash ?? 0, honoraScore: 78, protectedHourlyRate: 72.84 },
-    forecast, limits: { clients: 2, invoices: 5, quotes: 1 },
+    metrics: { monthlyIncome: 8900, accountsReceivable: 4750, overdueAmount: 1200, topClientShare: 43.8, projectedCash13w: forecast.at(-1)?.closingCash ?? 0, honoraScore: 78, protectedHourlyRate: 72.84, pipelineValue: 16_812, leadConversionRate: 33 },
+    automations: [
+      { id: "collection:demo", priority: "high", kind: "collection", title: "Cobrar S/ 1,200 a Páramo Digital", detail: "Sprint de automatización vencido hace 4 días.", action: "Enviar recordatorio de pago hoy", value: 1200 },
+      { id: "lead:l1", priority: "high", kind: "lead", title: "Responder a Mariana Torres", detail: "Fit 91/100 · presupuesto S/ 6,200.", action: "Agendar discovery call hoy", value: 6200 },
+      { id: "risk:concentration", priority: "medium", kind: "risk", title: "Reducir concentración de revenue", detail: "Estudio Norte representa 44% del ingreso.", action: "Convertir dos leads esta semana", value: 0 },
+    ],
+    forecast, limits: { leads: 10, clients: 2, invoices: 5, quotes: 1 },
   };
 }
 
-const navItems: { id: Tab; label: string; icon: string }[] = [
-  { id: "overview", label: "Overview", icon: "⌁" }, { id: "cashflow", label: "Cash flow", icon: "∿" },
-  { id: "clients", label: "Clientes", icon: "◎" }, { id: "collections", label: "Cobros", icon: "◫" },
-  { id: "quotes", label: "Quotes", icon: "◇" }, { id: "billing", label: "Plan Pro", icon: "↗" },
-  { id: "settings", label: "Configuración", icon: "⚙" },
+const navItems: { id: Tab; label: string; icon: string; group: "OPERATE" | "INTELLIGENCE" | "ACCOUNT" }[] = [
+  { id: "overview", label: "Command Center", icon: "⌁", group: "OPERATE" },
+  { id: "leads", label: "Lead Inbox", icon: "✦", group: "OPERATE" },
+  { id: "quotes", label: "Quotes", icon: "◇", group: "OPERATE" },
+  { id: "collections", label: "Cobros", icon: "◫", group: "OPERATE" },
+  { id: "cashflow", label: "Caja 13W", icon: "∿", group: "INTELLIGENCE" },
+  { id: "clients", label: "Clientes", icon: "◎", group: "INTELLIGENCE" },
+  { id: "copilot", label: "Honora Copilot", icon: "H", group: "INTELLIGENCE" },
+  { id: "billing", label: "Plan Pro", icon: "↗", group: "ACCOUNT" },
+  { id: "settings", label: "Configuración", icon: "⚙", group: "ACCOUNT" },
 ];
 
 export default function DashboardClient({ mode, initialUser }: { mode: "live" | "demo"; initialUser: { name: string; email: string } }) {
@@ -99,27 +120,25 @@ export default function DashboardClient({ mode, initialUser }: { mode: "live" | 
     } catch (caught) {
       const value = caught as Error & { code?: string };
       setError(value.message);
-      if (value.code === "PLAN_LIMIT") setActiveTab("billing");
+      if (value.code === "PLAN_LIMIT" || value.code === "PLAN_REQUIRED") setActiveTab("billing");
       return false;
     } finally { setBusy(false); }
   };
 
-  if (!data) return <div className="workspace-loading"><span className="brand-mark">H</span><p>{error || "Preparando tu Financial OS…"}</p>{error && <button onClick={() => void load()}>Reintentar</button>}</div>;
+  if (!data) return <div className="workspace-loading"><span className="brand-mark">H</span><p>{error || "Preparando tu Client-to-Cash OS…"}</p>{error && <button onClick={() => void load()}>Reintentar</button>}</div>;
 
   const firstName = (data.user.name || initialUser.name).split(" ")[0];
   const month = new Intl.DateTimeFormat("es-PE", { month: "long", year: "numeric" }).format(new Date());
+  const activeLeadCount = data.leads.filter((lead) => !["won", "lost"].includes(lead.status)).length;
 
   return (
     <main className="workspace-shell">
       <aside className="workspace-sidebar">
-        <Link className="workspace-brand" href="/"><span className="brand-mark">H</span><span><strong>HONORA</strong><small>FINANCIAL OS</small></span></Link>
+        <Link className="workspace-brand" href="/"><span className="brand-mark">H</span><span><strong>HONORA</strong><small>CLIENT-TO-CASH OS</small></span></Link>
         <nav aria-label="Módulos de Honora">
-          <small>WORKSPACE</small>
-          {navItems.slice(0, 5).map((item) => <button key={item.id} className={activeTab === item.id ? "active" : ""} onClick={() => setActiveTab(item.id)}><i>{item.icon}</i><span>{item.label}</span>{item.id === "collections" && data.metrics.overdueAmount > 0 && <b>!</b>}</button>)}
-          <small>ACCOUNT</small>
-          {navItems.slice(5).map((item) => <button key={item.id} className={activeTab === item.id ? "active" : ""} onClick={() => setActiveTab(item.id)}><i>{item.icon}</i><span>{item.label}</span></button>)}
+          {(["OPERATE", "INTELLIGENCE", "ACCOUNT"] as const).map((group) => <div className="nav-group" key={group}><small>{group}</small>{navItems.filter((item) => item.group === group).map((item) => <button key={item.id} className={activeTab === item.id ? "active" : ""} onClick={() => setActiveTab(item.id)}><i>{item.icon}</i><span>{item.label}</span>{item.id === "collections" && data.metrics.overdueAmount > 0 && <b>!</b>}{item.id === "leads" && data.leads.filter((lead) => lead.status === "new").length > 0 && <b>{data.leads.filter((lead) => lead.status === "new").length}</b>}</button>)}</div>)}
         </nav>
-        <div className="sidebar-plan"><span>{data.workspace.plan === "pro" ? "PRO WORKSPACE" : "FREE WORKSPACE"}</span><strong>{data.workspace.plan === "pro" ? "Sistema desbloqueado" : `${data.clients.length}/${data.limits.clients} clientes usados`}</strong><div><i style={{ width: data.workspace.plan === "pro" ? "100%" : `${Math.min(100, data.clients.length / data.limits.clients * 100)}%` }} /></div>{data.workspace.plan === "free" && <button onClick={() => setActiveTab("billing")}>Ver Pro →</button>}</div>
+        <div className="sidebar-plan"><span>{data.workspace.plan === "pro" ? "PRO WORKSPACE" : "FREE WORKSPACE"}</span><strong>{data.workspace.plan === "pro" ? "Client-to-Cash activo" : `${activeLeadCount}/${data.limits.leads} leads activos`}</strong><div><i style={{ width: data.workspace.plan === "pro" ? "100%" : `${Math.min(100, activeLeadCount / data.limits.leads * 100)}%` }} /></div>{data.workspace.plan === "free" && <button onClick={() => setActiveTab("billing")}>Ver Pro →</button>}</div>
         <div className="sidebar-user"><span>{firstName.slice(0, 1).toUpperCase()}</span><div><strong>{data.user.name || initialUser.name}</strong><small>{mode === "demo" ? "Demo interactiva" : data.user.email}</small></div>{mode === "live" && <a href="/signout-with-chatgpt?return_to=%2F" aria-label="Cerrar sesión">↗</a>}</div>
       </aside>
 
@@ -131,10 +150,12 @@ export default function DashboardClient({ mode, initialUser }: { mode: "live" | 
         {busy && <div className="busy-line"><i /></div>}
 
         {activeTab === "overview" && <Overview data={data} firstName={firstName} month={month} go={setActiveTab} />}
+        {activeTab === "leads" && <LeadsPanel data={data} mode={mode} setData={setData} mutate={mutate} setNotice={setNotice} setError={setError} />}
         {activeTab === "cashflow" && <CashFlow data={data} />}
         {activeTab === "clients" && <ClientsPanel data={data} mode={mode} setData={setData} mutate={mutate} />}
         {activeTab === "collections" && <CollectionsPanel data={data} mode={mode} setData={setData} mutate={mutate} />}
         {activeTab === "quotes" && <QuotesPanel data={data} mode={mode} setData={setData} mutate={mutate} />}
+        {activeTab === "copilot" && <CopilotPanel data={data} mode={mode} />}
         {activeTab === "billing" && <BillingPanel data={data} mode={mode} setNotice={setNotice} setError={setError} />}
         {activeTab === "settings" && <SettingsPanel data={data} mode={mode} setData={setData} mutate={mutate} />}
       </section>
@@ -151,22 +172,27 @@ function MetricCard({ label, value, note, tone = "normal", index }: { label: str
 }
 
 function Overview({ data, firstName, month, go }: { data: DashboardData; firstName: string; month: string; go: (tab: Tab) => void }) {
-  const outstanding = data.invoices.filter((invoice) => invoice.status !== "paid");
+  const stages = [
+    { label: "Nuevos", value: data.leads.filter((lead) => lead.status === "new").length },
+    { label: "Calificados", value: data.leads.filter((lead) => lead.status === "qualified").length },
+    { label: "Propuesta", value: data.leads.filter((lead) => lead.status === "proposal").length + data.quotes.filter((quote) => quote.status !== "accepted").length },
+    { label: "Ganados", value: data.leads.filter((lead) => lead.status === "won").length },
+  ];
   return <div className="workspace-content">
-    <SectionHeader eyebrow={`EXECUTIVE OVERVIEW · ${month.toUpperCase()}`} title={`Buenos días, ${firstName}.`} copy="Aquí está la verdad operativa de tu negocio y la próxima decisión que más puede proteger tu caja." action={<button className="primary-action" onClick={() => go("collections")}>Registrar cobro <span>＋</span></button>} />
+    <SectionHeader eyebrow={`CLIENT-TO-CASH COMMAND CENTER · ${month.toUpperCase()}`} title={`Tu próxima venta ya tiene un siguiente paso, ${firstName}.`} copy="Honora conecta captación, propuesta, cobro y caja para que ninguna oportunidad rentable se pierda entre herramientas." action={<button className="primary-action" onClick={() => go("leads")}>Abrir Lead Inbox <span>→</span></button>} />
     <div className="metrics-grid">
-      <MetricCard index="01" label="REVENUE / MES" value={money.format(data.metrics.monthlyIncome)} note={`${data.clients.filter((client) => client.status === "active").length} clientes activos`} tone="good" />
-      <MetricCard index="02" label="ACCOUNTS RECEIVABLE" value={money.format(data.metrics.accountsReceivable)} note={`${money.format(data.metrics.overdueAmount)} vencido`} tone={data.metrics.overdueAmount > 0 ? "warn" : "normal"} />
+      <MetricCard index="01" label="OPEN PIPELINE" value={money.format(data.metrics.pipelineValue)} note={`${data.leads.filter((lead) => !["won", "lost"].includes(lead.status)).length} oportunidades activas`} tone="good" />
+      <MetricCard index="02" label="ACCOUNTS RECEIVABLE" value={money.format(data.metrics.accountsReceivable)} note={`${money.format(data.metrics.overdueAmount)} overdue`} tone={data.metrics.overdueAmount > 0 ? "warn" : "normal"} />
       <MetricCard index="03" label="13-WEEK CASH" value={money.format(data.metrics.projectedCash13w)} note={data.metrics.projectedCash13w >= 0 ? "Caja proyectada positiva" : "Requiere acción inmediata"} tone={data.metrics.projectedCash13w >= 0 ? "good" : "warn"} />
-      <MetricCard index="04" label="HONORA SCORE" value={`${data.metrics.honoraScore}/100`} note={data.metrics.honoraScore >= 75 ? "Operación saludable" : "Equilibrio por mejorar"} />
+      <MetricCard index="04" label="REVENUE / MES" value={money.format(data.metrics.monthlyIncome)} note={`${data.clients.filter((client) => client.status === "active").length} clientes activos`} />
     </div>
-    <div className="overview-grid">
-      <article className="panel forecast-overview"><div className="panel-head"><div><span>13-WEEK CASH FORECAST</span><h2>Liquidez proyectada</h2></div><button onClick={() => go("cashflow")}>Abrir detalle ↗</button></div><ForecastBars forecast={data.forecast} /><div className="forecast-summary"><span>Opening cash <b>{money.format(data.workspace.cashReserve)}</b></span><span>Closing cash <b>{money.format(data.metrics.projectedCash13w)}</b></span><span>Net movement <b>{money.format(data.metrics.projectedCash13w - data.workspace.cashReserve)}</b></span></div></article>
-      <article className="panel score-panel"><div className="panel-head"><div><span>REVENUE QUALITY</span><h2>Concentración</h2></div><b className={data.metrics.topClientShare > 40 ? "risk-chip" : "healthy-chip"}>{data.metrics.topClientShare > 40 ? "ALTA" : "CONTROLADA"}</b></div><div className="score-dial" style={{ "--score-angle": `${Math.min(100, data.metrics.topClientShare) * 3.6}deg` } as React.CSSProperties}><div><strong>{data.metrics.topClientShare.toFixed(0)}%</strong><small>top client</small></div></div><p>{data.metrics.topClientShare > 40 ? "Más del 40% de tu revenue depende de un cliente. Protege tu pipeline antes de aumentar costos fijos." : "Tu cartera mantiene una concentración manejable. Defiende la recurrencia de los clientes rentables."}</p><button onClick={() => go("clients")}>Revisar client economics →</button></article>
+    <div className="overview-grid ctc-grid">
+      <article className="panel pipeline-overview"><div className="panel-head"><div><span>CLIENT-TO-CASH PIPELINE</span><h2>De consulta a dinero cobrado</h2></div><button onClick={() => go("leads")}>Gestionar pipeline ↗</button></div><div className="funnel-strip">{stages.map((stage, index) => <div key={stage.label}><small>0{index + 1}</small><strong>{stage.value}</strong><span>{stage.label}</span>{index < stages.length - 1 && <i>→</i>}</div>)}</div><div className="pipeline-value-row"><div><span>PIPELINE VALUE</span><b>{money.format(data.metrics.pipelineValue)}</b></div><p>Valor potencial entre leads activos y quotes abiertos. Honora prioriza el siguiente movimiento, no solo el total.</p></div></article>
+      <article className="copilot-callout"><span>HONORA COPILOT</span><h2>Pregunta con tus datos.</h2><p>“¿A quién debo cobrar hoy?”<br />“¿Cuánto debería cotizar?”<br />“¿Qué lead debo responder primero?”</p><button onClick={() => go("copilot")}>Abrir Copilot <b>H</b></button></article>
     </div>
-    <div className="overview-grid lower">
-      <article className="panel collection-preview"><div className="panel-head"><div><span>COLLECTION RADAR</span><h2>Próximos cobros</h2></div><button onClick={() => go("collections")}>Ver todos →</button></div>{outstanding.length ? <div className="compact-table">{outstanding.slice(0, 4).map((invoice) => <div key={invoice.id}><span className={`status-dot ${invoice.status}`} /><div><strong>{invoice.clientName}</strong><small>{invoice.description}</small></div><time>{shortDate.format(new Date(`${invoice.dueDate}T00:00:00Z`))}</time><b>{money.format(invoice.amount)}</b></div>)}</div> : <EmptyState title="Nada pendiente" copy="Tu accounts receivable está limpio." />}</article>
-      <article className="opportunity-card"><span>PRICING OPPORTUNITY</span><div><strong>{exactMoney.format(data.metrics.protectedHourlyRate)}</strong><small>protected hourly rate</small></div><h2>Cotiza desde tu margen, no desde la intuición.</h2><p>El quote builder protege costos externos, contingency y target margin antes de presentar un precio.</p><button onClick={() => go("quotes")}>Crear project quote <span>→</span></button></article>
+    <div className="overview-grid lower money-grid">
+      <article className="panel automation-panel"><div className="panel-head"><div><span>MONEY MOVES · THIS WEEK</span><h2>Acciones automáticas priorizadas</h2></div><b>{data.automations.length}</b></div>{data.automations.length ? <div className="automation-list">{data.automations.slice(0, 4).map((item) => <div key={item.id}><span className={`automation-kind ${item.kind}`}>{item.kind === "collection" ? "$" : item.kind === "lead" ? "✦" : item.kind === "proposal" ? "◇" : "!"}</span><div><strong>{item.title}</strong><small>{item.detail}</small></div><p>{item.action}</p><em className={item.priority}>{item.priority}</em></div>)}</div> : <EmptyState title="Sin acciones críticas" copy="Tu operación está al día." />}</article>
+      <article className="panel cash-mini"><div className="panel-head"><div><span>CASH POSITION</span><h2>13-week outlook</h2></div><button onClick={() => go("cashflow")}>Abrir ↗</button></div><ForecastBars forecast={data.forecast} /><div className="forecast-summary"><span>Opening <b>{money.format(data.workspace.cashReserve)}</b></span><span>Closing <b>{money.format(data.metrics.projectedCash13w)}</b></span></div></article>
     </div>
   </div>;
 }
@@ -185,6 +211,122 @@ function CashFlow({ data }: { data: DashboardData }) {
     <div className="cash-insight"><div><span>LOWEST CASH POINT</span><strong>{money.format(lowest?.closingCash ?? 0)}</strong><small>Semana {lowest?.week ?? 1}</small></div><p>{(lowest?.closingCash ?? 0) < 0 ? "La proyección cruza cero. Acelera cobros o difiere gastos antes de esa semana." : "La caja se mantiene positiva en todo el horizonte. Conserva el buffer antes de asumir nuevos costos."}</p></div>
     <article className="panel full-forecast"><div className="panel-head"><div><span>ROLLING FORECAST</span><h2>Cash position por semana</h2></div><b>13W</b></div><ForecastBars forecast={data.forecast} /></article>
     <article className="panel forecast-table"><div className="table-row table-head"><span>Semana</span><span>Opening cash</span><span>Inflows</span><span>Outflows</span><span>Closing cash</span><span>Signal</span></div>{data.forecast.map((week) => <div className="table-row" key={week.week}><b>W{String(week.week).padStart(2, "0")}</b><span>{money.format(week.openingCash)}</span><span className="positive">+{money.format(week.inflow)}</span><span className="negative">−{money.format(week.outflow)}</span><strong>{money.format(week.closingCash)}</strong><em className={`forecast-signal ${week.risk}`}>{week.risk}</em></div>)}</article>
+  </div>;
+}
+
+function LeadsPanel({ data, mode, setData, mutate, setNotice, setError }: { data: DashboardData; mode: "live" | "demo"; setData: (data: DashboardData) => void; mutate: (path: string, method: "POST" | "PATCH", body: unknown, success: string) => Promise<boolean>; setNotice: (value: string) => void; setError: (value: string) => void }) {
+  const [view, setView] = useState<"pipeline" | "capture" | "import">("pipeline");
+  const [form, setForm] = useState({ fullName: "", email: "", phone: "", business: "", service: "Estrategia / consultoría", challenge: "", budget: 1500, urgency: "30d" as Lead["urgency"], source: "manual" });
+  const intakePath = `/intake/${data.workspace.intakeSlug || "mi-studio"}`;
+  const openLeads = data.leads.filter((lead) => !["won", "lost"].includes(lead.status));
+  const stages: { id: Lead["status"]; label: string }[] = [{ id: "new", label: "Nuevos" }, { id: "qualified", label: "Calificados" }, { id: "proposal", label: "Propuesta" }, { id: "won", label: "Ganados" }];
+
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    if (mode === "demo") {
+      const scored = scoreLead(form);
+      const lead: Lead = { id: demoId(), ...form, phone: form.phone || null, business: form.business || null, status: "new", score: scored.score, nextAction: scored.nextAction, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+      setData({ ...data, leads: [lead, ...data.leads], metrics: { ...data.metrics, pipelineValue: data.metrics.pipelineValue + lead.budget } });
+      setNotice(`Lead calificado automáticamente con fit ${lead.score}/100.`);
+      setForm({ fullName: "", email: "", phone: "", business: "", service: "Estrategia / consultoría", challenge: "", budget: 1500, urgency: "30d", source: "manual" });
+      setView("pipeline");
+      return;
+    }
+    if (await mutate("/api/leads", "POST", form, "Lead guardado y calificado automáticamente.")) setView("pipeline");
+  };
+
+  const changeStatus = async (lead: Lead, status: Lead["status"]) => {
+    if (mode === "demo") {
+      const leads = data.leads.map((item) => item.id === lead.id ? { ...item, status, updatedAt: new Date().toISOString() } : item);
+      setData({ ...data, leads });
+      return;
+    }
+    await mutate("/api/leads", "PATCH", { leadId: lead.id, status }, "Pipeline actualizado.");
+  };
+
+  const convert = async (lead: Lead) => {
+    if (mode === "demo") {
+      const quoteInput = { hours: Math.max(8, Math.round(lead.budget / 100)), hourlyRate: Math.max(80, Math.round(data.metrics.protectedHourlyRate)), externalCosts: 0, contingencyRate: 10, targetMargin: data.workspace.targetMargin };
+      const calculated = calculateProjectQuote(quoteInput);
+      const client: Client = { id: demoId(), name: lead.fullName, email: lead.email, monthlyRevenue: 0, paymentTermsDays: 15, status: "active", createdAt: new Date().toISOString() };
+      const quote: Quote = { id: demoId(), clientName: lead.fullName, projectName: lead.service, ...quoteInput, total: calculated.total, status: "draft", createdAt: new Date().toISOString() };
+      setData({ ...data, leads: data.leads.map((item) => item.id === lead.id ? { ...item, status: "proposal" as const, nextAction: "Revisar y enviar propuesta" } : item), clients: [client, ...data.clients], quotes: [quote, ...data.quotes], metrics: { ...data.metrics, pipelineValue: data.metrics.pipelineValue + quote.total } });
+      setNotice("Lead convertido en cliente y quote draft. Revisa el precio antes de enviarlo.");
+      return;
+    }
+    await mutate("/api/leads/convert", "POST", { leadId: lead.id }, "Lead convertido en cliente + quote draft.");
+  };
+
+  const importCsv = async (file: File | undefined) => {
+    if (!file) return;
+    const parsed = parseGoogleFormsCsv(await file.text());
+    if (!parsed.length) { setError("No encontramos filas válidas. Incluye columnas Nombre, Email, Servicio, Necesidad y Presupuesto."); return; }
+    if (mode === "demo") {
+      const imported: Lead[] = parsed.map((row) => {
+        const scored = scoreLead(row);
+        return { id: demoId(), ...row, phone: row.phone || null, business: row.business || null, status: "new", score: scored.score, nextAction: scored.nextAction, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+      });
+      setData({ ...data, leads: [...imported, ...data.leads], metrics: { ...data.metrics, pipelineValue: data.metrics.pipelineValue + imported.reduce((sum, lead) => sum + lead.budget, 0) } });
+      setNotice(`${imported.length} leads importados y calificados desde Google Forms / Sheets.`);
+      setView("pipeline");
+      return;
+    }
+    if (await mutate("/api/leads/import", "POST", { leads: parsed }, `${parsed.length} leads importados y calificados desde Google Forms / Sheets.`)) setView("pipeline");
+  };
+
+  const copyIntake = async () => {
+    const url = `${window.location.origin}${intakePath}`;
+    await navigator.clipboard.writeText(url);
+    setNotice("Smart Intake copiado. Compártelo por WhatsApp, LinkedIn o tu web.");
+  };
+
+  return <div className="workspace-content lead-workspace">
+    <SectionHeader eyebrow="ACQUISITION · CRM · CONVERSION" title="Convierte consultas en revenue." copy="Un inbox comercial conectado: captura, califica, prioriza y convierte un lead en cliente + quote sin volver a copiar datos." action={<button className="primary-action" onClick={() => setView("capture")}>Agregar lead <span>＋</span></button>} />
+    <div className="capture-toolbar">
+      <div><span>SMART INTAKE</span><strong>{intakePath}</strong><small>Formulario compartible que alimenta este pipeline.</small></div>
+      <button onClick={() => void copyIntake()}>Copiar enlace</button>
+      {mode === "live" && <Link href={intakePath} target="_blank">Vista previa ↗</Link>}
+    </div>
+    <div className="subnav"><button className={view === "pipeline" ? "active" : ""} onClick={() => setView("pipeline")}>Pipeline <b>{openLeads.length}</b></button><button className={view === "capture" ? "active" : ""} onClick={() => setView("capture")}>Captura manual</button><button className={view === "import" ? "active" : ""} onClick={() => setView("import")}>Google Forms Bridge</button></div>
+
+    {view === "pipeline" && <div className="pipeline-board">{stages.map((stage) => <section key={stage.id} className="pipeline-column"><header><span>{stage.label}</span><b>{data.leads.filter((lead) => lead.status === stage.id).length}</b></header><div>{data.leads.filter((lead) => lead.status === stage.id).map((lead) => <article key={lead.id} className="lead-card"><div className="lead-card-top"><span className={`fit-score ${lead.score >= 78 ? "hot" : lead.score >= 58 ? "warm" : "nurture"}`}>{lead.score}</span><small>{lead.source.replaceAll("_", " ")}</small></div><h3>{lead.fullName}</h3><p>{lead.service}</p><div className="lead-money"><strong>{money.format(lead.budget)}</strong><span>{lead.urgency === "7d" ? "Esta semana" : lead.urgency === "30d" ? "30 días" : lead.urgency === "90d" ? "90 días" : "Explorando"}</span></div><small className="lead-next">{lead.nextAction}</small><div className="lead-actions">{lead.status === "new" && <button onClick={() => void changeStatus(lead, "qualified")}>Calificar</button>}{["new", "qualified"].includes(lead.status) && <button className="primary" onClick={() => void convert(lead)}>Cliente + quote</button>}{lead.status === "proposal" && <button onClick={() => void changeStatus(lead, "won")}>Marcar ganado</button>}</div></article>)}</div></section>)}</div>}
+
+    {view === "capture" && <div className="lead-capture-grid"><form className="panel data-form lead-form" onSubmit={submit}><div className="panel-head"><div><span>NEW OPPORTUNITY</span><h2>Captura y calificación</h2></div><b>AUTO-SCORE</b></div><div className="form-split"><Field label="Nombre" value={form.fullName} onChange={(value) => setForm({ ...form, fullName: value })} required /><Field label="Email" type="email" value={form.email} onChange={(value) => setForm({ ...form, email: value })} required /></div><div className="form-split"><Field label="WhatsApp" value={form.phone} onChange={(value) => setForm({ ...form, phone: value })} /><Field label="Negocio" value={form.business} onChange={(value) => setForm({ ...form, business: value })} /></div><label className="field"><span>Servicio</span><select value={form.service} onChange={(event) => setForm({ ...form, service: event.target.value })}><option>Estrategia / consultoría</option><option>Diseño / branding</option><option>Marketing / growth</option><option>Automatización / tecnología</option><option>Otro servicio profesional</option></select></label><label className="field"><span>Necesidad / resultado esperado</span><textarea minLength={20} value={form.challenge} onChange={(event) => setForm({ ...form, challenge: event.target.value })} required /></label><div className="form-split"><NumberInput label="Presupuesto" value={form.budget} onChange={(value) => setForm({ ...form, budget: value })} /><label className="field"><span>Timing</span><select value={form.urgency} onChange={(event) => setForm({ ...form, urgency: event.target.value as Lead["urgency"] })}><option value="7d">Esta semana</option><option value="30d">30 días</option><option value="90d">90 días</option><option value="exploring">Explorando</option></select></label></div><button className="form-submit" type="submit">Guardar y calificar <span>→</span></button></form><aside className="qualification-model"><span>QUALIFICATION ENGINE</span><h2>Fit Score / 100</h2><p>Prioriza usando señales operativas, no datos sensibles:</p><ul><li><b>34%</b> presupuesto declarado</li><li><b>24%</b> urgencia del proyecto</li><li><b>22%</b> claridad de la necesidad</li><li><b>20%</b> contexto de contacto</li></ul><small>El score sugiere prioridad; tú conservas la decisión final.</small></aside></div>}
+
+    {view === "import" && <div className="forms-bridge"><article><span>GOOGLE FORMS → HONORA</span><h2>Trae tus respuestas. Honora hace el resto.</h2><p>En Google Forms, vincula las respuestas a Sheets, descarga la hoja como CSV y suéltala aquí. Cada fila se convierte en un lead con score, fuente y siguiente acción.</p><label className="csv-drop"><b>＋</b><strong>Seleccionar CSV de respuestas</strong><small>Máximo 100 leads por importación</small><input type="file" accept=".csv,text/csv" onChange={(event) => void importCsv(event.target.files?.[0])} /></label></article><aside><span>MAPEO AUTOMÁTICO</span>{["Nombre / Name", "Correo / Email", "Teléfono / WhatsApp", "Servicio", "Necesidad / Problema", "Presupuesto / Budget"].map((field) => <div key={field}><b>✓</b>{field}</div>)}<small>Honora reconoce encabezados en español e inglés. Las filas incompletas se excluyen.</small></aside></div>}
+  </div>;
+}
+
+function CopilotPanel({ data, mode }: { data: DashboardData; mode: "live" | "demo" }) {
+  const prompts = ["¿Qué hago esta semana?", "¿Quién me debe dinero?", "¿Qué lead respondo primero?", "¿Cuánto debería cobrar?", "¿Cómo estará mi caja en 13 semanas?"];
+  const [question, setQuestion] = useState("");
+  const [response, setResponse] = useState<CopilotResponse>(() => answerCopilot(prompts[0], data));
+  const [loading, setLoading] = useState(false);
+
+  const ask = async (value = question) => {
+    if (!value.trim()) return;
+    setQuestion(value);
+    setLoading(true);
+    try {
+      if (mode === "demo") setResponse(answerCopilot(value, data));
+      else {
+        const result = await fetch("/api/copilot", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ question: value }) });
+        const payload = await result.json() as CopilotResponse & { error?: string };
+        if (!result.ok) throw new Error(payload.error || "Copilot no pudo responder.");
+        setResponse(payload);
+      }
+    } catch (error) {
+      setResponse({
+        intent: "plan_limit",
+        answer: error instanceof Error ? error.message : "Copilot no pudo responder.",
+        evidence: ["Tus datos permanecen guardados y disponibles en el workspace."],
+        next: "Activa Honora Pro para usar Copilot sin límites.",
+      });
+    } finally { setLoading(false); }
+  };
+
+  return <div className="workspace-content copilot-workspace"><SectionHeader eyebrow="DATA-GROUNDED BUSINESS ASSISTANT" title="Pregunta. Decide. Avanza." copy="Honora Copilot responde con tu pipeline, pricing, cobros y cash forecast; cada recomendación muestra la evidencia utilizada." />
+    <div className="copilot-grid"><section className="copilot-chat"><div className="copilot-orb">H</div><div className="copilot-answer"><span>HONORA COPILOT · {response.intent.toUpperCase()}</span><h2>{response.answer}</h2><div className="evidence-stack"><small>EVIDENCIA</small>{response.evidence.map((item) => <p key={item}><b>↳</b>{item}</p>)}</div><div className="copilot-next"><span>NEXT BEST ACTION</span><strong>{response.next}</strong></div></div><form onSubmit={(event) => { event.preventDefault(); void ask(); }}><input value={question} onChange={(event) => setQuestion(event.target.value)} placeholder="Pregunta sobre ventas, precios, cobros o caja…" /><button disabled={loading}>{loading ? "…" : "→"}</button></form></section><aside className="copilot-side"><span>QUICK QUESTIONS</span>{prompts.map((prompt) => <button key={prompt} onClick={() => void ask(prompt)}>{prompt}<b>↗</b></button>)}<div><small>{data.workspace.plan === "pro" ? "PRIVATE BY DESIGN" : `${Math.max(0, 5 - data.workspace.copilotQuestionsUsed)} FREE QUESTIONS LEFT`}</small><p>El asistente analiza únicamente los datos de tu workspace. No inventa saldos ni reemplaza asesoría contable, legal o tributaria.</p></div></aside></div>
   </div>;
 }
 
@@ -267,11 +409,11 @@ function BillingPanel({ data, mode, setNotice, setError }: { data: DashboardData
     } catch (caught) { setError(caught instanceof Error ? caught.message : "Checkout no disponible."); }
     finally { setLoading(false); }
   };
-  return <div className="workspace-content billing-content"><SectionHeader eyebrow="HONORA PRO" title="Paga por control, no por pantallas." copy="Una sola mejora de precio o un cobro anticipado puede cubrir muchos meses de Honora." />
+  return <div className="workspace-content billing-content"><SectionHeader eyebrow="HONORA PRO" title="Paga por mover revenue." copy="Honora conecta captación, conversión, pricing y cobros. Una oportunidad recuperada puede pagar el sistema por meses." />
     {data.workspace.plan === "pro" && <div className="current-plan-banner"><span>✓</span><div><strong>Honora Pro está activo</strong><p>Tu workspace no tiene límites de clientes, cobros ni quotes.</p></div><b>ACTIVE</b></div>}
-    <div className="billing-grid"><article className="billing-plan"><div className="founding-tag">FOUNDING 100 · S/ 10 DE AHORRO</div><span>HONORA PRO</span><strong>S/ 29.90<small>/ mes</small></strong><p>Precio fundador mientras mantengas activa la suscripción. Precio regular proyectado: S/ 39.90.</p><button onClick={() => void checkout()} disabled={loading || data.workspace.plan === "pro"}>{data.workspace.plan === "pro" ? "Plan activo ✓" : loading ? "Conectando…" : "Activar con Mercado Pago →"}</button><small className="billing-safety">El pago ocurre en Mercado Pago. Honora no recibe ni guarda PAN, fecha de expiración o CVV.</small></article>
-      <article className="value-stack"><span>WHAT YOU UNLOCK</span>{[{ n: "01", t: "Unlimited operating records", c: "Clientes, accounts receivable y project quotes sin límites." }, { n: "02", t: "13-week Cash Forecast", c: "Visibilidad semanal para anticipar déficits de caja." }, { n: "03", t: "Pricing leak detection", c: "Protección de contingency, costs y target margin." }, { n: "04", t: "Client risk signals", c: "Revenue concentration y payment terms visibles." }].map((item) => <div key={item.n}><b>{item.n}</b><p><strong>{item.t}</strong><small>{item.c}</small></p></div>)}</article></div>
-    <div className="roi-strip"><div><span>BREAK-EVEN EXAMPLE</span><strong>1 quote corregido</strong></div><p>Si Honora te ayuda a proteger <b>S/ 300</b> adicionales en una propuesta, cubre aproximadamente <b>10 meses</b> del plan fundador.</p></div>
+    <div className="billing-grid"><article className="billing-plan"><div className="founding-tag">FOUNDING 100 · PRECIO BLOQUEADO</div><span>HONORA PRO</span><strong>S/ 29.90<small>/ mes</small></strong><p>Precio fundador mientras mantengas activa la suscripción. Precio regular proyectado: S/ 49.90.</p><button onClick={() => void checkout()} disabled={loading || data.workspace.plan === "pro"}>{data.workspace.plan === "pro" ? "Plan activo ✓" : loading ? "Conectando…" : "Activar con Mercado Pago →"}</button><small className="billing-safety">El pago ocurre en Mercado Pago. Honora no recibe ni guarda PAN, fecha de expiración o CVV.</small></article>
+      <article className="value-stack"><span>WHAT YOU UNLOCK</span>{[{ n: "01", t: "Lead-to-Cash pipeline", c: "Smart Intake, Google Forms Bridge y CRM sin límites." }, { n: "02", t: "Honora Copilot ilimitado", c: "Respuestas accionables usando tus datos comerciales y financieros." }, { n: "03", t: "Pricing + Collection Engine", c: "Quotes con margen protegido y prioridades de cobro." }, { n: "04", t: "13-week Cash Forecast", c: "Pipeline, receivables y caja futura en un mismo sistema." }].map((item) => <div key={item.n}><b>{item.n}</b><p><strong>{item.t}</strong><small>{item.c}</small></p></div>)}</article></div>
+    <div className="roi-strip"><div><span>BREAK-EVEN EXAMPLE</span><strong>1 lead recuperado</strong></div><p>Si Honora evita que pierdas una oportunidad de <b>S/ 1,500</b>, cubre aproximadamente <b>50 meses</b> del plan fundador.</p></div>
   </div>;
 }
 

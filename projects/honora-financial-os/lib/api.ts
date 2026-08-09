@@ -50,6 +50,17 @@ export function optionalText(value: unknown, max = 180) {
   return typeof value === "string" ? value.trim().slice(0, max) : "";
 }
 
+export function emailAddress(value: unknown, label = "Email") {
+  const email = requiredText(value, label, 160).toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw validation(`${label} no es válido.`);
+  return email;
+}
+
+export function oneOf<T extends string>(value: unknown, values: readonly T[], label: string): T {
+  if (typeof value !== "string" || !values.includes(value as T)) throw validation(`${label} no es válido.`);
+  return value as T;
+}
+
 export function numberInRange(value: unknown, label: string, minimum: number, maximum: number) {
   const number = Number(value);
   if (!Number.isFinite(number) || number < minimum || number > maximum) {

@@ -1,8 +1,39 @@
-# Honora Methodology
+# Honora Methodology — Client-to-Cash
 
 ## Principio
 
 Cada número debe terminar en una decisión: cuánto cobrar, qué cuenta perseguir, cuánta caja queda y qué cliente concentra el riesgo. Honora usa fórmulas visibles y supuestos configurables.
+
+## Lead Fit Score
+
+El score prioriza señales operativas declaradas por el propio prospecto:
+
+```text
+Fit Score = presupuesto (34) + urgencia (24) + claridad (22) + contexto de contacto (20)
+```
+
+- `hot`: 78–100, responder hoy.
+- `warm`: 58–77, validar alcance y presupuesto en 48 horas.
+- `nurture`: 0–57, entregar valor y mantener seguimiento.
+
+No usa edad, género, ubicación precisa, origen, salud, crédito ni otras categorías sensibles. El score recomienda prioridad; el profesional conserva la decisión final.
+
+## Money Moves
+
+La cola semanal combina cuatro señales, ordenadas por prioridad y valor:
+
+1. invoices `overdue`;
+2. leads nuevos con Fit Score ≥ 58;
+3. quotes en `draft` por al menos dos días;
+4. top-client share ≥ 40%.
+
+## Honora Copilot
+
+Copilot clasifica preguntas por intención —collections, pricing, pipeline, concentration, cash flow y weekly plan— y responde únicamente con métricas calculadas del workspace. Cada respuesta incluye evidencia y next best action. Es un asistente operativo determinístico, no un modelo de lenguaje ni asesoría profesional.
+
+## Google Forms Bridge
+
+El parser CSV reconoce encabezados en español e inglés, campos entre comillas y montos con separadores decimales o de miles. Solo importa filas con nombre y email; los campos faltantes reciben defaults explícitos para validación posterior.
 
 ## Protected hourly rate
 
