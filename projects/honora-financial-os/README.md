@@ -5,7 +5,7 @@
 Honora es un micro‑SaaS local-first para profesionales independientes. Convierte ingresos irregulares, costos, horas facturables y riesgo de clientes en una tarifa protegida, cash runway, stress tests y un plan financiero de 90 días.
 
 [![Product access](https://img.shields.io/badge/access-private-c8ff62?style=flat-square&labelColor=111612)](#privacidad)
-[![Model checks](https://github.com/Gabrielfpch/honora-financial-os/actions/workflows/ci.yml/badge.svg)](https://github.com/Gabrielfpch/honora-financial-os/actions/workflows/ci.yml)
+[![Model checks](https://github.com/Gabrielfpch/macrorisk-lab/actions/workflows/ci.yml/badge.svg)](https://github.com/Gabrielfpch/macrorisk-lab/actions/workflows/ci.yml)
 [![Privacy](https://img.shields.io/badge/privacy-local--first-1d704f?style=flat-square&labelColor=111612)](#privacidad)
 
 ## El problema
