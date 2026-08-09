@@ -1,4 +1,4 @@
-# Honora — Business Plan v3
+# Honora — Business Plan v4
 
 ## Tesis comercial
 
@@ -20,6 +20,14 @@ Profesionales independientes peruanos que venden servicios de S/ 800–10,000, t
 | Pro Founding 100 | S/ 29.90/mes | Operar pipeline, Google Forms Bridge, Copilot y records sin límites |
 | Pro regular proyectado | S/ 49.90/mes | Precio posterior a validación de retención y willingness to pay |
 
+## Activation ladder
+
+1. Crear cuenta y terminar onboarding en menos de tres minutos.
+2. Cargar negocio de ejemplo o importar Google Forms.
+3. Convertir un lead en cliente + quote.
+4. Marcar un cobro y observar cómo Ledger, estados, forecast y Copilot se actualizan juntos.
+5. Volver a una conversación anterior de Copilot y ejecutar su next best action.
+
 ## Value equation
 
 Recuperar un lead de S/ 1,500 equivale a aproximadamente 50 meses del plan fundador. Proteger S/ 300 adicionales en un quote equivale a diez meses. El onboarding debe llevar al usuario a uno de esos momentos de valor durante la primera sesión.
@@ -37,9 +45,9 @@ La comisión real debe reemplazar el supuesto al activar el merchant account. Co
 
 ## Activation y retention
 
-- **Activation:** primer lead capturado + primera next best action.
+- **Activation:** cuenta creada + primer lead capturado + primera next best action.
 - **Aha moment:** convertir un lead en cliente + quote sin volver a escribir datos.
-- **Weekly habit:** ejecutar al menos un Money Move.
+- **Weekly habit:** ejecutar un Money Move y revisar el cierre financiero conectado.
 - **Value moment:** recuperar un lead, proteger margen o cobrar una factura overdue.
 - **Retention proxy:** dos semanas consecutivas con pipeline o collection actualizado.
 

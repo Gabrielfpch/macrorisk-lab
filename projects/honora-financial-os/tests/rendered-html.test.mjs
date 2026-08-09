@@ -49,3 +49,19 @@ test("billing checkout requires an account and fails closed without merchant con
   assert.equal(authenticated.status, 503);
   assert.equal((await authenticated.json()).code, "BILLING_NOT_CONFIGURED");
 });
+
+test("la cuenta demo exige credenciales y crea una sesión aislada", async () => {
+  const workerUrl = new URL("../dist/server/index.js", import.meta.url);
+  workerUrl.searchParams.set("demo-auth-test", `${process.pid}-${Date.now()}`);
+  const { default: worker } = await import(workerUrl.href);
+  const environment = { ASSETS: { fetch: async () => new Response("Not found", { status: 404 }) } };
+  const context = { waitUntil() {}, passThroughOnException() {} };
+
+  const rejected = await worker.fetch(new Request("http://localhost/api/demo/session", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ username: "gabriel", password: "incorrecta" }) }), environment, context);
+  assert.equal(rejected.status, 401);
+
+  const accepted = await worker.fetch(new Request("http://localhost/api/demo/session", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ username: "gabriel", password: "honora2026" }) }), environment, context);
+  assert.equal(accepted.status, 200);
+  assert.match(accepted.headers.get("set-cookie") ?? "", /honora_demo_session=/);
+  assert.equal((await accepted.json()).redirectTo, "/demo");
+});

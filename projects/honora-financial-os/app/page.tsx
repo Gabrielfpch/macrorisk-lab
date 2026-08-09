@@ -21,7 +21,7 @@ export default function Home() {
         <div className="eyebrow"><i /> Client-to-Cash OS · Built in Peru</div>
         <h1>De una consulta<br />a <em>dinero cobrado.</em></h1>
         <p>Honora convierte formularios, leads, propuestas y cobros en un solo sistema para profesionales independientes que quieren vender con método y operar con margen.</p>
-        <div className="hero-buttons"><Link className="button button-accent" href="/app">Crear mi pipeline <span>→</span></Link><Link className="text-link" href="/demo">Probar demo interactiva <span>↗</span></Link></div>
+        <div className="hero-buttons"><Link className="button button-accent" href="/app">Crear mi cuenta <span>→</span></Link><Link className="text-link" href="/demo/login">Entrar con usuario demo <span>↗</span></Link></div>
         <div className="hero-trust"><span><b>✓</b> Plan Free sin tarjeta</span><span><b>✓</b> Base de datos persistente</span><span><b>✓</b> Workspace privado</span></div>
       </div>
 
@@ -48,7 +48,7 @@ export default function Home() {
     </section>
 
     <section className="copilot-section" id="copilot">
-      <div className="copilot-marketing-copy"><span>DATA-GROUNDED ASSISTANT</span><h2>Un bot general responde.<br /><em>Honora decide contigo.</em></h2><p>Copilot no inventa consejos genéricos: usa tu Lead Inbox, protected rate, accounts receivable y 13-week Cash Forecast. Cada respuesta muestra la evidencia y una next best action.</p><ul><li>¿Quién me debe dinero hoy?</li><li>¿Cuánto debería cobrar por este proyecto?</li><li>¿Qué lead tiene mayor fit?</li><li>¿Qué hago esta semana para proteger caja?</li></ul><Link className="button button-light" href="/demo">Probar Copilot <span>→</span></Link></div>
+      <div className="copilot-marketing-copy"><span>DATA-GROUNDED ASSISTANT</span><h2>Un bot general responde.<br /><em>Honora recuerda y decide contigo.</em></h2><p>Copilot cruza Lead Inbox, protected rate, accounts receivable, Ledger y estados financieros. Cada conversación queda guardada con evidencia y una next best action.</p><ul><li>¿Quién me debe dinero hoy?</li><li>¿Cómo están mis estados financieros?</li><li>¿Qué lead tiene mayor fit?</li><li>¿Qué hago esta semana para proteger caja?</li></ul><Link className="button button-light" href="/demo/login">Probar Copilot <span>→</span></Link></div>
       <div className="copilot-marketing-card"><header><b>H</b><span>HONORA COPILOT</span><small>GROUNDED IN YOUR DATA</small></header><div className="user-question">¿Qué hago primero esta semana?</div><div className="assistant-reply"><small>NEXT BEST ACTION</small><h3>Cobra S/ 1,200 a Páramo Digital hoy.</h3><p>Es la acción con mayor impacto inmediato en caja. La factura lleva 4 días vencida.</p><div><span>EVIDENCIA</span><b>S/ 4,750 receivable</b><b>S/ 1,200 overdue</b></div></div><footer>Pregunta sobre ventas, precios, cobros o caja… <b>→</b></footer></div>
     </section>
 

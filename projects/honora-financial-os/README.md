@@ -10,6 +10,10 @@ Honora une captación, CRM, pricing, cobros y cash flow para profesionales indep
 - **One-click conversion:** un lead se convierte en cliente + protected quote sin volver a copiar datos.
 - **Google Forms Bridge:** importación CSV desde Google Sheets con mapeo bilingüe y auto-score.
 - **Honora Copilot:** asistente determinístico, basado en los datos del workspace y con evidencia visible.
+- **Onboarding persistente:** el primer acceso crea y configura el workspace con una confirmación visible; ya no existe un CTA sin feedback.
+- **Cuenta demo guiada:** login aislado para recorrer la experiencia completa sin tocar datos reales.
+- **Connected Financial Core:** un Ledger alimenta Estado de resultados, Balance Sheet, Cash Flow, ratios y forecast.
+- **Copilot Memory:** preguntas, respuestas, evidencia y next best action se guardan en D1 y pueden reabrirse.
 - **Money Moves:** acciones semanales derivadas de overdue invoices, hot leads, draft quotes y revenue concentration.
 - **Collection Radar, 13-week Cash Forecast y Client Economics.**
 - **Cuenta segura con Sign in with ChatGPT** y datos persistentes separados por usuario en Cloudflare D1.
@@ -20,7 +24,10 @@ Honora une captación, CRM, pricing, cobros y cash flow para profesionales indep
 |---|---|
 | `/` | Landing comercial Client-to-Cash |
 | `/demo` | Demo interactiva y editable sin persistencia |
+| `/demo/login` | Acceso con credenciales a la experiencia demo |
 | `/app` | Workspace autenticado |
+| `/api/onboarding` | Creación y configuración inicial de la cuenta |
+| `/api/ledger` | Registro de ingresos y gastos conectados |
 | `/intake/[slug]` | Smart Intake compartible |
 | `/api/leads` | Alta y avance de leads |
 | `/api/leads/convert` | Conversión a cliente + quote |
@@ -62,7 +69,18 @@ npm run lint
 npm test
 ```
 
-`npm test` compila el Worker, valida el artifact de Sites y ejecuta pruebas de modelos financieros, Fit Score, CSV Bridge, automations, Copilot, render y billing fail-closed.
+`npm test` compila el Worker, valida el artifact de Sites y ejecuta pruebas de modelos financieros, estados conectados, Fit Score, CSV Bridge, automations, memoria de Copilot, cuenta demo, render y billing fail-closed.
+
+## Identidad y acceso
+
+La cuenta de producción usa Sign in with ChatGPT y crea el usuario + workspace en D1 durante el primer acceso. Honora no almacena contraseñas de producción. La cuenta demo es un entorno aislado y sin datos reales; sus credenciales existen únicamente para enseñar el recorrido del producto.
+
+## Modelo financiero conectado
+
+- Un cobro marcado como pagado genera automáticamente su movimiento de ingreso en el Ledger.
+- Un movimiento manual recalcula los tres estados, ratios, closing cash y forecast.
+- El Balance Sheet verifica la identidad `Assets = Liabilities + Equity`.
+- Los estados son una vista gerencial; no sustituyen estados preparados o auditados por un contador.
 
 ## Nota responsable
 

@@ -15,6 +15,7 @@ import {
   parseGoogleFormsCsv,
   scoreLead,
 } from "../lib/client-to-cash.ts";
+import { buildFinancialStatements } from "../lib/financial-statements.ts";
 
 const financials = {
   monthlyIncome: 6500,
@@ -130,4 +131,45 @@ test("Copilot responde con cifras trazables del workspace", () => {
   assert.match(response.answer, /Páramo/);
   assert.match(response.answer, /1[,.]200/);
   assert.ok(response.evidence.length > 0);
+});
+
+test("los tres estados financieros comparten un Ledger y el balance cuadra", () => {
+  const statements = buildFinancialStatements({
+    openingCash: 5000,
+    monthlyFixedCosts: 2000,
+    reserveRate: 10,
+    asOf: "2026-08-09",
+    entries: [
+      { id: "t1", kind: "income", category: "Servicios", description: "Proyecto", amount: 4000, occurredOn: "2026-08-04", source: "manual" },
+      { id: "t2", kind: "expense", category: "Software", description: "Herramientas", amount: 1000, occurredOn: "2026-08-05", source: "manual" },
+    ],
+    invoices: [{ amount: 1200, status: "overdue" }, { amount: 4000, status: "paid" }],
+    clients: [{ monthlyRevenue: 4000, status: "active" }],
+  });
+  assert.equal(statements.summary.revenue, 4000);
+  assert.equal(statements.summary.expenses, 1000);
+  assert.equal(statements.summary.closingCash, 8000);
+  assert.equal(statements.summary.accountsReceivable, 1200);
+  assert.equal(statements.summary.netIncome, 2700);
+  assert.equal(statements.balanceSheet.balanced, true);
+  assert.equal(statements.balanceSheet.assets.at(-1).amount, statements.balanceSheet.equity.at(-1).amount);
+});
+
+test("Copilot interpreta P&L y conserva memoria de preguntas anteriores", () => {
+  const statements = buildFinancialStatements({
+    openingCash: 5000, monthlyFixedCosts: 2000, reserveRate: 8, asOf: "2026-08-09",
+    entries: [{ id: "t1", kind: "income", category: "Servicios", description: "Proyecto", amount: 5000, occurredOn: "2026-08-04", source: "manual" }],
+    invoices: [], clients: [],
+  });
+  const base = {
+    workspace: { businessName: "Studio", targetMargin: 25, revenueGoal: 10000 },
+    leads: [], clients: [], invoices: [], quotes: [], automations: [], financials: statements, ledgerEntries: [],
+    metrics: { monthlyIncome: 5000, accountsReceivable: 0, overdueAmount: 0, topClientShare: 0, projectedCash13w: 8000, protectedHourlyRate: 80, pipelineValue: 0 },
+  };
+  const profit = answerCopilot("¿Cómo está mi estado de resultados?", base);
+  assert.equal(profit.intent, "profitability");
+  assert.match(profit.answer, /net income/i);
+  const memory = answerCopilot("¿Qué te pregunté antes?", { ...base, copilotHistory: [{ question: "¿Quién me debe?", answer: "Nadie", createdAt: "2026-08-09T10:00:00Z" }] });
+  assert.equal(memory.intent, "conversation_history");
+  assert.match(memory.answer, /Quién me debe/);
 });

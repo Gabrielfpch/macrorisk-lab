@@ -1,3 +1,5 @@
+import type { FinancialStatements, LedgerEntryLike } from "./financial-statements";
+
 export type LeadUrgency = "7d" | "30d" | "90d" | "exploring";
 export type LeadStatus = "new" | "qualified" | "proposal" | "won" | "lost";
 
@@ -23,7 +25,7 @@ export type AutomationItem = {
 };
 
 type CopilotData = {
-  workspace: { businessName: string; targetMargin: number };
+  workspace: { businessName: string; targetMargin: number; revenueGoal?: number; primaryService?: string };
   leads: Array<{
     id: string;
     fullName: string;
@@ -46,6 +48,9 @@ type CopilotData = {
     pipelineValue: number;
   };
   automations: AutomationItem[];
+  financials?: FinancialStatements;
+  ledgerEntries?: LedgerEntryLike[];
+  copilotHistory?: Array<{ question: string; answer: string; createdAt: string }>;
 };
 
 const clamp = (value: number, minimum: number, maximum: number) =>
@@ -146,6 +151,8 @@ export function answerCopilot(question: string, data: CopilotData) {
   const openLeads = data.leads.filter((lead) => !["won", "lost"].includes(lead.status)).sort((a, b) => b.score - a.score);
   const topClient = [...data.clients].sort((a, b) => b.monthlyRevenue - a.monthlyRevenue)[0];
   const priority = data.automations[0];
+  const statements = data.financials;
+  const history = data.copilotHistory ?? [];
 
   if (/qu[eé] hago|plan.*semana|esta semana/.test(normalized)) {
     return {
@@ -159,6 +166,110 @@ export function answerCopilot(question: string, data: CopilotData) {
         `13-week cash: ${money(data.metrics.projectedCash13w)}`,
       ],
       next: priority?.action ?? "Revisa pipeline, pricing y cobros una vez por semana para mantener la operación al día.",
+    };
+  }
+
+  if (/qu[eé].*pregunt|historial|conversaci[oó]n.*anter|antes.*dije/.test(normalized)) {
+    return history.length
+      ? {
+          intent: "conversation_history",
+          answer: `Tienes ${history.length} conversaciones guardadas. La más reciente fue: “${history[0].question}”.`,
+          evidence: history.slice(0, 3).map((item) => item.question),
+          next: "Abre una conversación del historial para volver a ver la respuesta, evidencia y siguiente acción.",
+        }
+      : {
+          intent: "conversation_history",
+          answer: "Todavía no tienes preguntas anteriores guardadas.",
+          evidence: ["Cada nueva respuesta quedará asociada a tu workspace."],
+          next: "Haz una pregunta sobre caja, ventas, pricing o estados financieros.",
+        };
+  }
+
+  if (/estado.*resultado|p\s*&\s*l|p[eé]rdid|ganancia|utilidad|rentab|profit|gasto|expense/.test(normalized)) {
+    if (!statements) return summaryResponse(data, priority);
+    return {
+      intent: "profitability",
+      answer: statements.summary.netIncome >= 0
+        ? `En ${statements.periodLabel}, tu net income estimado es ${money(statements.summary.netIncome)} con margen operativo de ${statements.ratios.operatingMargin.toFixed(1)}%.`
+        : `En ${statements.periodLabel}, registras una pérdida estimada de ${money(Math.abs(statements.summary.netIncome))}.`,
+      evidence: [
+        `Revenue cobrado: ${money(statements.summary.revenue)}`,
+        `Operating expenses: ${money(statements.summary.expenses)}`,
+        `Reserva tributaria: ${money(statements.summary.taxReserve)}`,
+      ],
+      next: statements.summary.netIncome < 0
+        ? "Revisa el Ledger, recorta el gasto menos productivo y acelera el cobro de receivables."
+        : "Compara el margen contra tu target y reserva el monto tributario antes de disponer de la utilidad.",
+    };
+  }
+
+  if (/balance|activo|pasivo|patrimonio|equity|situaci[oó]n financiera/.test(normalized)) {
+    if (!statements) return summaryResponse(data, priority);
+    const liabilities = statements.balanceSheet.liabilities.at(-1)?.amount ?? 0;
+    const equity = statements.balanceSheet.equity[0]?.amount ?? 0;
+    return {
+      intent: "balance_sheet",
+      answer: `Tus assets estimados suman ${money(statements.summary.totalAssets)} y el balance está ${statements.balanceSheet.balanced ? "cuadrado" : "pendiente de revisión"}.`,
+      evidence: [
+        `Cash: ${money(statements.summary.closingCash)}`,
+        `Accounts receivable: ${money(statements.summary.accountsReceivable)}`,
+        `Liabilities: ${money(liabilities)} · Equity: ${money(equity)}`,
+      ],
+      next: "Revisa que cada cobro real y gasto esté registrado en el Ledger antes de usar este cuadro para decisiones formales.",
+    };
+  }
+
+  if (/flujo.*efectivo|cash flow statement|movimiento|ledger|libro|transacci[oó]n/.test(normalized)) {
+    if (!statements) return summaryResponse(data, priority);
+    return {
+      intent: "cash_statement",
+      answer: `Tu net cash flow acumulado es ${money(statements.summary.closingCash - statements.summary.openingCash)} y el closing cash es ${money(statements.summary.closingCash)}.`,
+      evidence: [
+        `Opening cash: ${money(statements.summary.openingCash)}`,
+        `Movimientos registrados: ${data.ledgerEntries?.length ?? 0}`,
+        `Cash runway: ${statements.ratios.cashRunwayMonths.toFixed(1)} meses`,
+      ],
+      next: "Registra todo ingreso o gasto en Estados financieros para que forecast, ratios y Copilot se actualicen juntos.",
+    };
+  }
+
+  if (/meta|objetivo.*venta|revenue goal|cu[aá]nto.*falta/.test(normalized)) {
+    const goal = data.workspace.revenueGoal ?? 0;
+    const gap = Math.max(0, goal - data.metrics.monthlyIncome);
+    return {
+      intent: "revenue_goal",
+      answer: goal > 0
+        ? gap > 0 ? `Te faltan ${money(gap)} de revenue mensual para alcanzar tu meta de ${money(goal)}.` : `Ya alcanzaste tu meta mensual de ${money(goal)}.`
+        : "Aún no has definido una meta mensual de revenue.",
+      evidence: [`Revenue mensual contratado: ${money(data.metrics.monthlyIncome)}`, `Pipeline abierto: ${money(data.metrics.pipelineValue)}`],
+      next: gap > 0 ? "Prioriza los leads con mayor Fit Score y convierte el gap en un número concreto de propuestas." : "Protege margen, renovaciones y calidad de cobro antes de elevar la meta.",
+    };
+  }
+
+  if (/c[oó]mo.*(agrego|crear|registro).*cliente|nuevo cliente/.test(normalized)) {
+    return {
+      intent: "product_help",
+      answer: "Ve a Clientes, completa nombre, email, revenue mensual y payment terms; al guardar, Honora recalcula concentración y revenue.",
+      evidence: ["Lead Inbox también puede convertir un prospecto en cliente + quote con un clic."],
+      next: "Si el cliente nació como lead, conviértelo desde Lead Inbox para conservar la trazabilidad completa.",
+    };
+  }
+
+  if (/google forms|google sheet|csv|import/.test(normalized)) {
+    return {
+      intent: "integration_help",
+      answer: "Exporta las respuestas de Google Forms desde su Google Sheet como CSV y súbelas en Lead Inbox. Honora reconoce encabezados en español o inglés y calcula el Fit Score.",
+      evidence: ["Campos mínimos: nombre y email", "Recomendados: servicio, necesidad, presupuesto, teléfono y empresa"],
+      next: "Descarga la plantilla del Bridge antes de importar para validar el formato en segundos.",
+    };
+  }
+
+  if (/qu[eé] es honora|para qu[eé] sirve|c[oó]mo funciona|ayuda general|hola|buenas/.test(normalized)) {
+    return {
+      intent: "product_guide",
+      answer: "Honora conecta el recorrido desde una consulta hasta el dinero cobrado: captura, califica, cotiza, cobra y traduce los movimientos en estados financieros.",
+      evidence: ["Lead Inbox → Protected Quote → Collection Radar", "Ledger → P&L + Balance Sheet + Cash Flow", "Copilot usa esos mismos datos"],
+      next: priority?.action ?? "Empieza por revisar Money Moves en el Command Center.",
     };
   }
 
@@ -232,6 +343,10 @@ export function answerCopilot(question: string, data: CopilotData) {
     };
   }
 
+  return summaryResponse(data, priority);
+}
+
+function summaryResponse(data: CopilotData, priority?: AutomationItem) {
   return {
     intent: "business_summary",
     answer: `${data.workspace.businessName} tiene ${money(data.metrics.pipelineValue)} en pipeline y ${money(data.metrics.accountsReceivable)} por cobrar.`,
@@ -240,7 +355,7 @@ export function answerCopilot(question: string, data: CopilotData) {
       `Accounts receivable: ${money(data.metrics.accountsReceivable)}`,
       `13-week cash: ${money(data.metrics.projectedCash13w)}`,
     ],
-    next: priority?.action ?? "Pregunta por pipeline, pricing, cobros, clientes o cash flow para obtener una recomendación específica.",
+    next: priority?.action ?? "Pregunta por pipeline, pricing, cobros, estados financieros o cómo usar Honora.",
   };
 }
 

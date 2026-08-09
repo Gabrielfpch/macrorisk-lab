@@ -23,6 +23,10 @@ export const workspaces = sqliteTable(
     targetMargin: real("target_margin").notNull().default(25),
     cashReserve: real("cash_reserve").notNull().default(8500),
     billableHours: real("billable_hours").notNull().default(80),
+    revenueGoal: real("revenue_goal").notNull().default(10000),
+    businessType: text("business_type").notNull().default("Servicios profesionales"),
+    primaryService: text("primary_service").notNull().default("Consultoría"),
+    onboardingCompleted: integer("onboarding_completed", { mode: "boolean" }).notNull().default(false),
     plan: text("plan", { enum: ["free", "pro"] }).notNull().default("free"),
     subscriptionStatus: text("subscription_status").notNull().default("inactive"),
     providerSubscriptionId: text("provider_subscription_id"),
@@ -113,4 +117,40 @@ export const quotes = sqliteTable(
     createdAt: text("created_at").notNull(),
   },
   (table) => [index("quotes_workspace_idx").on(table.workspaceId)],
+);
+
+export const ledgerEntries = sqliteTable(
+  "ledger_entries",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+    kind: text("kind", { enum: ["income", "expense"] }).notNull(),
+    category: text("category").notNull(),
+    description: text("description").notNull(),
+    amount: real("amount").notNull(),
+    occurredOn: text("occurred_on").notNull(),
+    source: text("source", { enum: ["manual", "invoice", "onboarding"] }).notNull().default("manual"),
+    clientName: text("client_name"),
+    invoiceId: text("invoice_id").references(() => invoices.id, { onDelete: "set null" }),
+    createdAt: text("created_at").notNull(),
+  },
+  (table) => [
+    index("ledger_workspace_date_idx").on(table.workspaceId, table.occurredOn),
+    uniqueIndex("ledger_invoice_unique").on(table.invoiceId),
+  ],
+);
+
+export const copilotConversations = sqliteTable(
+  "copilot_conversations",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+    question: text("question").notNull(),
+    intent: text("intent").notNull(),
+    answer: text("answer").notNull(),
+    evidenceJson: text("evidence_json").notNull().default("[]"),
+    nextAction: text("next_action").notNull(),
+    createdAt: text("created_at").notNull(),
+  },
+  (table) => [index("copilot_workspace_created_idx").on(table.workspaceId, table.createdAt)],
 );

@@ -27,9 +27,24 @@ La cola semanal combina cuatro señales, ordenadas por prioridad y valor:
 3. quotes en `draft` por al menos dos días;
 4. top-client share ≥ 40%.
 
-## Honora Copilot
+## Honora Copilot + Memory
 
-Copilot clasifica preguntas por intención —collections, pricing, pipeline, concentration, cash flow y weekly plan— y responde únicamente con métricas calculadas del workspace. Cada respuesta incluye evidencia y next best action. Es un asistente operativo determinístico, no un modelo de lenguaje ni asesoría profesional.
+Copilot clasifica preguntas por intención —collections, pricing, pipeline, concentration, cash flow, profitability, balance sheet, product help y weekly plan— y responde únicamente con métricas calculadas del workspace. Cada respuesta incluye evidencia y next best action. Pregunta, respuesta, evidencia y acción quedan guardadas en D1 para reabrir conversaciones. Es un asistente operativo determinístico, no un modelo de lenguaje ni asesoría profesional.
+
+## Connected Financial Core
+
+El Ledger es la fuente de verdad para movimientos realizados. Una factura abierta alimenta accounts receivable; al marcarla como pagada, Honora crea un ingreso vinculado e idempotente.
+
+```text
+closing cash = opening cash + cash inflows - cash outflows
+operating profit = revenue cobrado - operating expenses
+tax reserve = max(0, operating profit × reserve rate)
+net income estimado = operating profit - tax reserve
+assets = closing cash + accounts receivable
+owner's equity = assets - liabilities
+```
+
+La vista comprueba `Assets = Liabilities + Equity`, genera una tendencia de seis meses y calcula operating margin, collection rate, cash runway, current ratio y DSO estimado. Es una vista gerencial automatizada, no contabilidad auditada.
 
 ## Google Forms Bridge
 

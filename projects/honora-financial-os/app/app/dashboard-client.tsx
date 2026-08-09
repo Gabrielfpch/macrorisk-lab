@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { answerCopilot, parseGoogleFormsCsv, scoreLead } from "../../lib/client-to-cash";
+import { buildFinancialStatements, type FinancialStatements, type LedgerEntryLike, type LedgerKind } from "../../lib/financial-statements";
 import { buildThirteenWeekForecast, calculateProjectQuote } from "../../lib/honora";
 
 type Lead = { id: string; fullName: string; email: string; phone: string | null; business: string | null; service: string; challenge: string; budget: number; urgency: "7d" | "30d" | "90d" | "exploring"; source: string; status: "new" | "qualified" | "proposal" | "won" | "lost"; score: number; nextAction: string; createdAt: string; updatedAt: string };
@@ -12,20 +13,25 @@ type Quote = { id: string; clientName: string; projectName: string; hours: numbe
 type ForecastWeek = { week: number; startDate: string; openingCash: number; inflow: number; outflow: number; closingCash: number; risk: "healthy" | "watch" | "critical" };
 type Automation = { id: string; priority: "high" | "medium" | "low"; kind: "collection" | "lead" | "proposal" | "risk"; title: string; detail: string; action: string; value: number };
 type CopilotResponse = { intent: string; answer: string; evidence: string[]; next: string };
+type CopilotConversation = CopilotResponse & { id: string; question: string; createdAt: string };
+type LedgerEntry = LedgerEntryLike & { workspaceId?: string };
 type DashboardData = {
   user: { name: string; email: string };
-  workspace: { id: string; businessName: string; intakeSlug: string | null; monthlyFixedCosts: number; reserveRate: number; targetMargin: number; cashReserve: number; billableHours: number; plan: "free" | "pro"; subscriptionStatus: string; copilotQuestionsUsed: number; copilotPeriod: string | null };
+  workspace: { id: string; businessName: string; intakeSlug: string | null; monthlyFixedCosts: number; reserveRate: number; targetMargin: number; cashReserve: number; billableHours: number; revenueGoal: number; businessType: string; primaryService: string; onboardingCompleted: boolean; plan: "free" | "pro"; subscriptionStatus: string; copilotQuestionsUsed: number; copilotPeriod: string | null };
   leads: Lead[];
   clients: Client[];
   invoices: Invoice[];
   quotes: Quote[];
+  ledgerEntries: LedgerEntry[];
+  financials: FinancialStatements;
+  copilotHistory: CopilotConversation[];
   metrics: { monthlyIncome: number; accountsReceivable: number; overdueAmount: number; topClientShare: number; projectedCash13w: number; honoraScore: number; protectedHourlyRate: number; pipelineValue: number; leadConversionRate: number };
   forecast: ForecastWeek[];
   automations: Automation[];
   limits: { leads: number; clients: number; invoices: number; quotes: number };
 };
 
-type Tab = "overview" | "leads" | "quotes" | "collections" | "cashflow" | "clients" | "copilot" | "billing" | "settings";
+type Tab = "overview" | "leads" | "quotes" | "collections" | "cashflow" | "financials" | "clients" | "copilot" | "billing" | "settings";
 
 const money = new Intl.NumberFormat("es-PE", { style: "currency", currency: "PEN", maximumFractionDigits: 0 });
 const exactMoney = new Intl.NumberFormat("es-PE", { style: "currency", currency: "PEN", maximumFractionDigits: 2 });
@@ -49,11 +55,25 @@ function createDemoData(): DashboardData {
     { id: "i2", clientId: "c2", clientName: "Páramo Digital", description: "Sprint de automatización", amount: 1200, dueDate: dateFromNow(-4), status: "overdue", issuedAt: new Date().toISOString(), paidAt: null },
     { id: "i3", clientId: "c3", clientName: "Lucía Benavides", description: "Financial review", amount: 950, dueDate: dateFromNow(12), status: "pending", issuedAt: new Date().toISOString(), paidAt: null },
   ];
-  const forecast = buildThirteenWeekForecast(8500, 710, invoices);
+  const ledgerEntries: LedgerEntry[] = [
+    { id: "t1", kind: "income", category: "Servicios", description: "Retainer cobrado", amount: 2600, occurredOn: dateFromNow(-2), source: "invoice", clientName: "Estudio Norte", invoiceId: null },
+    { id: "t2", kind: "income", category: "Consultoría", description: "Financial review", amount: 1800, occurredOn: dateFromNow(-12), source: "manual", clientName: "Lucía Benavides", invoiceId: null },
+    { id: "t3", kind: "income", category: "Automatización", description: "Implementación fase 1", amount: 2300, occurredOn: dateFromNow(-36), source: "manual", clientName: "Páramo Digital", invoiceId: null },
+    { id: "t4", kind: "expense", category: "Software", description: "Herramientas y suscripciones", amount: 420, occurredOn: dateFromNow(-3), source: "manual", clientName: null, invoiceId: null },
+    { id: "t5", kind: "expense", category: "Marketing", description: "Campaña de captación", amount: 650, occurredOn: dateFromNow(-8), source: "manual", clientName: null, invoiceId: null },
+    { id: "t6", kind: "expense", category: "Operaciones", description: "Servicios administrativos", amount: 780, occurredOn: dateFromNow(-38), source: "manual", clientName: null, invoiceId: null },
+  ];
+  const financials = buildFinancialStatements({ openingCash: 8500, monthlyFixedCosts: 3075, reserveRate: 8, entries: ledgerEntries, invoices, clients });
+  const forecast = buildThirteenWeekForecast(financials.summary.closingCash, 710, invoices);
+  const copilotHistory: CopilotConversation[] = [
+    { id: "h1", question: "¿Quién me debe dinero?", intent: "collections", answer: "Tienes S/ 1,200 vencidos. Empieza por Páramo Digital.", evidence: ["Páramo Digital · S/ 1,200 · 4 días overdue", "Accounts receivable: S/ 4,750"], next: "Enviar recordatorio de pago hoy.", createdAt: new Date(Date.now() - 3_600_000).toISOString() },
+    { id: "h2", question: "¿Cómo están mis estados financieros?", intent: "profitability", answer: `Tu net income estimado es ${money.format(financials.summary.netIncome)}.`, evidence: [`Revenue cobrado: ${money.format(financials.summary.revenue)}`, `Operating expenses: ${money.format(financials.summary.expenses)}`], next: "Registrar todos los movimientos pendientes y revisar el margen.", createdAt: new Date(Date.now() - 86_400_000).toISOString() },
+  ];
   return {
     user: { name: "Gabriel Pérez Chávez", email: "demo@honora.pe" },
-    workspace: { id: "demo", businessName: "Gabriel Independent Studio", intakeSlug: "gabriel-studio", monthlyFixedCosts: 3075, reserveRate: 8, targetMargin: 25, cashReserve: 8500, billableHours: 80, plan: "pro", subscriptionStatus: "demo", copilotQuestionsUsed: 0, copilotPeriod: null },
+    workspace: { id: "demo", businessName: "Gabriel Independent Studio", intakeSlug: "gabriel-studio", monthlyFixedCosts: 3075, reserveRate: 8, targetMargin: 25, cashReserve: 8500, billableHours: 80, revenueGoal: 12000, businessType: "Consultoría", primaryService: "Estrategia financiera", onboardingCompleted: true, plan: "pro", subscriptionStatus: "demo", copilotQuestionsUsed: 0, copilotPeriod: null },
     leads, clients, invoices,
+    ledgerEntries, financials, copilotHistory,
     quotes: [{ id: "q1", clientName: "Altura Labs", projectName: "Go-to-market sprint", hours: 42, hourlyRate: 95, externalCosts: 450, contingencyRate: 10, targetMargin: 25, total: 6512, status: "draft", createdAt: new Date().toISOString() }],
     metrics: { monthlyIncome: 8900, accountsReceivable: 4750, overdueAmount: 1200, topClientShare: 43.8, projectedCash13w: forecast.at(-1)?.closingCash ?? 0, honoraScore: 78, protectedHourlyRate: 72.84, pipelineValue: 16_812, leadConversionRate: 33 },
     automations: [
@@ -71,6 +91,7 @@ const navItems: { id: Tab; label: string; icon: string; group: "OPERATE" | "INTE
   { id: "quotes", label: "Quotes", icon: "◇", group: "OPERATE" },
   { id: "collections", label: "Cobros", icon: "◫", group: "OPERATE" },
   { id: "cashflow", label: "Caja 13W", icon: "∿", group: "INTELLIGENCE" },
+  { id: "financials", label: "Estados financieros", icon: "▦", group: "INTELLIGENCE" },
   { id: "clients", label: "Clientes", icon: "◎", group: "INTELLIGENCE" },
   { id: "copilot", label: "Honora Copilot", icon: "H", group: "INTELLIGENCE" },
   { id: "billing", label: "Plan Pro", icon: "↗", group: "ACCOUNT" },
@@ -127,6 +148,17 @@ export default function DashboardClient({ mode, initialUser }: { mode: "live" | 
 
   if (!data) return <div className="workspace-loading"><span className="brand-mark">H</span><p>{error || "Preparando tu Client-to-Cash OS…"}</p>{error && <button onClick={() => void load()}>Reintentar</button>}</div>;
 
+  if (mode === "live" && !data.workspace.onboardingCompleted) {
+    return <OnboardingExperience
+      initialUser={initialUser}
+      busy={busy}
+      error={error}
+      onComplete={(nextData) => { setData(nextData); setNotice("Cuenta creada. Tu workspace financiero ya está conectado."); setError(""); }}
+      onError={setError}
+      setBusy={setBusy}
+    />;
+  }
+
   const firstName = (data.user.name || initialUser.name).split(" ")[0];
   const month = new Intl.DateTimeFormat("es-PE", { month: "long", year: "numeric" }).format(new Date());
   const activeLeadCount = data.leads.filter((lead) => !["won", "lost"].includes(lead.status)).length;
@@ -152,15 +184,68 @@ export default function DashboardClient({ mode, initialUser }: { mode: "live" | 
         {activeTab === "overview" && <Overview data={data} firstName={firstName} month={month} go={setActiveTab} />}
         {activeTab === "leads" && <LeadsPanel data={data} mode={mode} setData={setData} mutate={mutate} setNotice={setNotice} setError={setError} />}
         {activeTab === "cashflow" && <CashFlow data={data} />}
+        {activeTab === "financials" && <FinancialStatementsPanel data={data} mode={mode} setData={setData} mutate={mutate} setNotice={setNotice} />}
         {activeTab === "clients" && <ClientsPanel data={data} mode={mode} setData={setData} mutate={mutate} />}
         {activeTab === "collections" && <CollectionsPanel data={data} mode={mode} setData={setData} mutate={mutate} />}
         {activeTab === "quotes" && <QuotesPanel data={data} mode={mode} setData={setData} mutate={mutate} />}
-        {activeTab === "copilot" && <CopilotPanel data={data} mode={mode} />}
+        {activeTab === "copilot" && <CopilotPanel data={data} mode={mode} setData={setData} />}
         {activeTab === "billing" && <BillingPanel data={data} mode={mode} setNotice={setNotice} setError={setError} />}
         {activeTab === "settings" && <SettingsPanel data={data} mode={mode} setData={setData} mutate={mutate} />}
       </section>
     </main>
   );
+}
+
+function OnboardingExperience({ initialUser, busy, error, onComplete, onError, setBusy }: {
+  initialUser: { name: string; email: string };
+  busy: boolean;
+  error: string;
+  onComplete: (data: DashboardData) => void;
+  onError: (message: string) => void;
+  setBusy: (value: boolean) => void;
+}) {
+  const [step, setStep] = useState(1);
+  const [form, setForm] = useState({
+    displayName: initialUser.name || initialUser.email.split("@")[0],
+    businessName: "",
+    businessType: "Consultoría",
+    primaryService: "",
+    revenueGoal: 10000,
+    monthlyFixedCosts: 1800,
+    cashReserve: 5000,
+    billableHours: 80,
+    targetMargin: 25,
+    reserveRate: 8,
+    sampleData: true,
+  });
+
+  const submit = async () => {
+    setBusy(true); onError("");
+    try {
+      const response = await fetch("/api/onboarding", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(form) });
+      const payload = await response.json() as DashboardData & { error?: string };
+      if (!response.ok) throw new Error(payload.error || "No pudimos crear tu workspace.");
+      onComplete(payload);
+    } catch (caught) {
+      onError(caught instanceof Error ? caught.message : "No pudimos crear tu workspace.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return <main className="onboarding-page">
+    <header><Link className="brand-lockup" href="/"><span className="brand-mark">H</span><span><strong>HONORA</strong><small>CLIENT-TO-CASH OS</small></span></Link><div><span>CUENTA VERIFICADA</span><b>{initialUser.email}</b></div></header>
+    <section className="onboarding-shell">
+      <aside><span>SETUP · 3 MIN</span><h1>Tu negocio, conectado desde el primer día.</h1><p>Este onboarding crea una cuenta real, un workspace privado y el modelo financiero que alimentará pricing, cobros, estados financieros y Copilot.</p><ol>{["Identidad del negocio", "Operating model", "Activar workspace"].map((label, index) => <li key={label} className={step >= index + 1 ? "active" : ""}><b>{index + 1}</b><span>{label}</span></li>)}</ol><div><small>SECURITY MODEL</small><p>Tu identidad se valida con ChatGPT. Honora no almacena contraseñas de producción.</p></div></aside>
+      <div className="onboarding-card">
+        <div className="onboarding-progress"><span style={{ width: `${step / 3 * 100}%` }} /></div>
+        {step === 1 && <div className="onboarding-step"><span>PASO 01 / 03</span><h2>¿Quién está construyendo?</h2><p>Personaliza el workspace que verá tu cliente desde el primer acceso.</p><Field label="Tu nombre" value={form.displayName} onChange={(value) => setForm({ ...form, displayName: value })} required /><Field label="Nombre del negocio" value={form.businessName} onChange={(value) => setForm({ ...form, businessName: value })} placeholder="Ej. Gabriel Advisory" required /><label className="field"><span>Tipo de negocio</span><select value={form.businessType} onChange={(event) => setForm({ ...form, businessType: event.target.value })}>{["Consultoría", "Creativo / diseño", "Tecnología", "Marketing", "Servicios profesionales", "Otro"].map((value) => <option key={value}>{value}</option>)}</select></label><Field label="Servicio principal" value={form.primaryService} onChange={(value) => setForm({ ...form, primaryService: value })} placeholder="Ej. Asesoría financiera" required /></div>}
+        {step === 2 && <div className="onboarding-step"><span>PASO 02 / 03</span><h2>Define tu operating model.</h2><p>Estos supuestos conectan el protected rate, cash runway y estados financieros.</p><div className="form-split"><NumberInput label="Meta de revenue / mes" value={form.revenueGoal} onChange={(value) => setForm({ ...form, revenueGoal: value })} /><NumberInput label="Operating costs / mes" value={form.monthlyFixedCosts} onChange={(value) => setForm({ ...form, monthlyFixedCosts: value })} /></div><div className="form-split"><NumberInput label="Opening cash" value={form.cashReserve} onChange={(value) => setForm({ ...form, cashReserve: value })} /><NumberInput label="Horas facturables / mes" value={form.billableHours} onChange={(value) => setForm({ ...form, billableHours: value })} suffix="h" /></div><div className="form-split"><NumberInput label="Target margin" value={form.targetMargin} onChange={(value) => setForm({ ...form, targetMargin: Math.min(80, value) })} suffix="%" /><NumberInput label="Reserva tributaria" value={form.reserveRate} onChange={(value) => setForm({ ...form, reserveRate: Math.min(60, value) })} suffix="%" /></div></div>}
+        {step === 3 && <div className="onboarding-step activation-step"><span>PASO 03 / 03</span><h2>Cuenta lista para activarse.</h2><p>Honora creará el workspace y conectará todos los módulos a una misma base de datos.</p><div className="activation-summary"><div><b>01</b><p><strong>Cuenta persistente</strong><small>{initialUser.email}</small></p><span>READY</span></div><div><b>02</b><p><strong>Financial core</strong><small>P&L · Balance Sheet · Cash Flow</small></p><span>READY</span></div><div><b>03</b><p><strong>Copilot memory</strong><small>Historial asociado al workspace</small></p><span>READY</span></div></div><label className="sample-toggle"><input type="checkbox" checked={form.sampleData} onChange={(event) => setForm({ ...form, sampleData: event.target.checked })} /><span><strong>Cargar un negocio de ejemplo</strong><small>Recomendado para entender el recorrido antes de usar datos reales.</small></span></label>{error && <p className="login-error">{error}</p>}</div>}
+        <footer><button className="back-button" onClick={() => step === 1 ? window.location.assign("/") : setStep(step - 1)}>{step === 1 ? "Salir" : "← Atrás"}</button>{step < 3 ? <button className="onboarding-next" disabled={(step === 1 && (!form.businessName || !form.primaryService))} onClick={() => setStep(step + 1)}>Continuar <span>→</span></button> : <button className="onboarding-next" disabled={busy} onClick={() => void submit()}>{busy ? "Creando cuenta…" : "Crear mi cuenta y entrar →"}</button>}</footer>
+      </div>
+    </section>
+  </main>;
 }
 
 function SectionHeader({ eyebrow, title, copy, action }: { eyebrow: string; title: string; copy: string; action?: React.ReactNode }) {
@@ -186,6 +271,7 @@ function Overview({ data, firstName, month, go }: { data: DashboardData; firstNa
       <MetricCard index="03" label="13-WEEK CASH" value={money.format(data.metrics.projectedCash13w)} note={data.metrics.projectedCash13w >= 0 ? "Caja proyectada positiva" : "Requiere acción inmediata"} tone={data.metrics.projectedCash13w >= 0 ? "good" : "warn"} />
       <MetricCard index="04" label="REVENUE / MES" value={money.format(data.metrics.monthlyIncome)} note={`${data.clients.filter((client) => client.status === "active").length} clientes activos`} />
     </div>
+    <button className="financial-sync-card" onClick={() => go("financials")}><span><i /> FINANCIAL CORE CONNECTED</span><p><small>NET INCOME</small><strong>{money.format(data.financials.summary.netIncome)}</strong></p><p><small>CLOSING CASH</small><strong>{money.format(data.financials.summary.closingCash)}</strong></p><p><small>BALANCE SHEET</small><strong>{data.financials.balanceSheet.balanced ? "CUADRADO ✓" : "REVISAR"}</strong></p><b>Ver estados financieros →</b></button>
     <div className="overview-grid ctc-grid">
       <article className="panel pipeline-overview"><div className="panel-head"><div><span>CLIENT-TO-CASH PIPELINE</span><h2>De consulta a dinero cobrado</h2></div><button onClick={() => go("leads")}>Gestionar pipeline ↗</button></div><div className="funnel-strip">{stages.map((stage, index) => <div key={stage.label}><small>0{index + 1}</small><strong>{stage.value}</strong><span>{stage.label}</span>{index < stages.length - 1 && <i>→</i>}</div>)}</div><div className="pipeline-value-row"><div><span>PIPELINE VALUE</span><b>{money.format(data.metrics.pipelineValue)}</b></div><p>Valor potencial entre leads activos y quotes abiertos. Honora prioriza el siguiente movimiento, no solo el total.</p></div></article>
       <article className="copilot-callout"><span>HONORA COPILOT</span><h2>Pregunta con tus datos.</h2><p>“¿A quién debo cobrar hoy?”<br />“¿Cuánto debería cotizar?”<br />“¿Qué lead debo responder primero?”</p><button onClick={() => go("copilot")}>Abrir Copilot <b>H</b></button></article>
@@ -211,6 +297,64 @@ function CashFlow({ data }: { data: DashboardData }) {
     <div className="cash-insight"><div><span>LOWEST CASH POINT</span><strong>{money.format(lowest?.closingCash ?? 0)}</strong><small>Semana {lowest?.week ?? 1}</small></div><p>{(lowest?.closingCash ?? 0) < 0 ? "La proyección cruza cero. Acelera cobros o difiere gastos antes de esa semana." : "La caja se mantiene positiva en todo el horizonte. Conserva el buffer antes de asumir nuevos costos."}</p></div>
     <article className="panel full-forecast"><div className="panel-head"><div><span>ROLLING FORECAST</span><h2>Cash position por semana</h2></div><b>13W</b></div><ForecastBars forecast={data.forecast} /></article>
     <article className="panel forecast-table"><div className="table-row table-head"><span>Semana</span><span>Opening cash</span><span>Inflows</span><span>Outflows</span><span>Closing cash</span><span>Signal</span></div>{data.forecast.map((week) => <div className="table-row" key={week.week}><b>W{String(week.week).padStart(2, "0")}</b><span>{money.format(week.openingCash)}</span><span className="positive">+{money.format(week.inflow)}</span><span className="negative">−{money.format(week.outflow)}</span><strong>{money.format(week.closingCash)}</strong><em className={`forecast-signal ${week.risk}`}>{week.risk}</em></div>)}</article>
+  </div>;
+}
+
+function StatementTable({ title, eyebrow, lines, periodLabel }: { title: string; eyebrow: string; lines: FinancialStatements["incomeStatement"]; periodLabel: string }) {
+  return <article className="statement-card"><header><div><span>{eyebrow}</span><h2>{title}</h2></div><b>{periodLabel}</b></header><div>{lines.map((line) => <p key={line.key} className={line.tone || "default"}><span>{line.label}</span><strong>{line.amount < 0 ? `(${money.format(Math.abs(line.amount))})` : money.format(line.amount)}</strong></p>)}</div></article>;
+}
+
+function FinancialStatementsPanel({ data, mode, setData, mutate, setNotice }: {
+  data: DashboardData;
+  mode: "live" | "demo";
+  setData: (data: DashboardData) => void;
+  mutate: (path: string, method: "POST" | "PATCH", body: unknown, success: string) => Promise<boolean>;
+  setNotice: (value: string) => void;
+}) {
+  const [view, setView] = useState<"statements" | "ledger">("statements");
+  const [form, setForm] = useState({ kind: "income" as LedgerKind, category: "Servicios", description: "", amount: 1200, occurredOn: dateFromNow(0), clientName: "" });
+  const financials = data.financials;
+  const chartMax = Math.max(1, ...financials.monthlyTrend.flatMap((item) => [item.revenue, item.expenses]));
+
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    if (mode === "demo") {
+      const entry: LedgerEntry = { id: demoId(), ...form, source: "manual", clientName: form.clientName || null, invoiceId: null };
+      const ledgerEntries = [entry, ...data.ledgerEntries];
+      const nextFinancials = buildFinancialStatements({ openingCash: data.workspace.cashReserve, monthlyFixedCosts: data.workspace.monthlyFixedCosts, reserveRate: data.workspace.reserveRate, entries: ledgerEntries, invoices: data.invoices, clients: data.clients });
+      const forecast = buildThirteenWeekForecast(nextFinancials.summary.closingCash, data.workspace.monthlyFixedCosts / 4.33, data.invoices);
+      setData({ ...data, ledgerEntries, financials: nextFinancials, forecast, metrics: { ...data.metrics, projectedCash13w: forecast.at(-1)?.closingCash ?? nextFinancials.summary.closingCash } });
+      setForm({ ...form, description: "", amount: 1200 });
+      setNotice("Movimiento registrado: P&L, Balance Sheet, Cash Flow y forecast fueron recalculados.");
+      return;
+    }
+    if (await mutate("/api/ledger", "POST", form, "Movimiento registrado y estados financieros actualizados.")) setForm({ ...form, description: "", amount: 1200 });
+  };
+
+  const exportLedger = () => {
+    const escape = (value: string | number | null | undefined) => `"${String(value ?? "").replaceAll('"', '""')}"`;
+    const rows = [["Fecha", "Tipo", "Categoría", "Descripción", "Cliente", "Monto", "Fuente"], ...data.ledgerEntries.map((entry) => [entry.occurredOn, entry.kind, entry.category, entry.description, entry.clientName ?? "", entry.amount, entry.source])];
+    const blob = new Blob([rows.map((row) => row.map(escape).join(",")).join("\n")], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url; link.download = `honora-ledger-${financials.period}.csv`; link.click();
+    URL.revokeObjectURL(url);
+    setNotice("Ledger exportado en CSV.");
+  };
+
+  return <div className="workspace-content financial-workspace">
+    <SectionHeader eyebrow="CONNECTED FINANCIAL CORE" title="Tus números, finalmente conectados." copy="Cada cobro o gasto alimenta el Ledger y recalcula P&L, Balance Sheet, Cash Flow, ratios, forecast y Copilot en el mismo momento." action={<button className="primary-action" onClick={exportLedger}>Exportar Ledger <span>↓</span></button>} />
+    <div className="financial-health-strip"><div><span>DATA STATUS</span><strong><i /> CONNECTED</strong></div><p>Último cierre dinámico: <b>{financials.periodLabel}</b></p><p>Balance: <b>{financials.balanceSheet.balanced ? "CUADRADO ✓" : "REVISAR"}</b></p><p>Movimientos: <b>{data.ledgerEntries.length}</b></p></div>
+    <div className="financial-kpis"><article><span>NET INCOME</span><strong>{money.format(financials.summary.netIncome)}</strong><small>{financials.ratios.operatingMargin.toFixed(1)}% operating margin</small></article><article><span>CLOSING CASH</span><strong>{money.format(financials.summary.closingCash)}</strong><small>{financials.ratios.cashRunwayMonths.toFixed(1)} meses de runway</small></article><article><span>COLLECTION RATE</span><strong>{financials.ratios.collectionRate.toFixed(0)}%</strong><small>{financials.ratios.dsoDays.toFixed(0)} días DSO estimado</small></article><article><span>TOTAL ASSETS</span><strong>{money.format(financials.summary.totalAssets)}</strong><small>{money.format(financials.summary.accountsReceivable)} receivable</small></article></div>
+    <div className="subnav financial-subnav"><button className={view === "statements" ? "active" : ""} onClick={() => setView("statements")}>Estados financieros</button><button className={view === "ledger" ? "active" : ""} onClick={() => setView("ledger")}>Ledger conectado <b>{data.ledgerEntries.length}</b></button></div>
+
+    {view === "statements" && <>
+      <div className="statement-grid"><StatementTable eyebrow="PROFIT & LOSS" title="Estado de resultados" lines={financials.incomeStatement} periodLabel={financials.periodLabel} /><article className="statement-card balance-statement"><header><div><span>FINANCIAL POSITION</span><h2>Balance Sheet</h2></div><b>{financials.balanceSheet.balanced ? "BALANCED" : "CHECK"}</b></header><small>ASSETS</small><div>{financials.balanceSheet.assets.map((line) => <p key={line.key} className={line.tone || "default"}><span>{line.label}</span><strong>{money.format(line.amount)}</strong></p>)}</div><small>LIABILITIES & EQUITY</small><div>{[...financials.balanceSheet.liabilities, ...financials.balanceSheet.equity].map((line) => <p key={line.key} className={line.tone || "default"}><span>{line.label}</span><strong>{money.format(line.amount)}</strong></p>)}</div></article><StatementTable eyebrow="DIRECT METHOD" title="Cash Flow Statement" lines={financials.cashFlowStatement} periodLabel={financials.periodLabel} /></div>
+      <div className="financial-analysis-grid"><article className="panel monthly-performance"><div className="panel-head"><div><span>6-MONTH PERFORMANCE</span><h2>Revenue vs expenses</h2></div><b>LIVE</b></div><div className="monthly-chart">{financials.monthlyTrend.map((item) => <div key={item.period}><div><i className="revenue" style={{ height: `${item.revenue / chartMax * 100}%` }} /><i className="expenses" style={{ height: `${item.expenses / chartMax * 100}%` }} /></div><small>{item.label.split(" ")[0]}</small><b>{money.format(item.netCash)}</b></div>)}</div><footer><span><i className="revenue" /> Revenue</span><span><i className="expenses" /> Expenses</span></footer></article><article className="panel ratio-table"><div className="panel-head"><div><span>FINANCIAL RATIOS</span><h2>Señales para decidir</h2></div><b>05</b></div>{[{ label: "Operating margin", value: `${financials.ratios.operatingMargin.toFixed(1)}%`, signal: financials.ratios.operatingMargin >= data.workspace.targetMargin ? "healthy" : "watch" }, { label: "Cash runway", value: `${financials.ratios.cashRunwayMonths.toFixed(1)} meses`, signal: financials.ratios.cashRunwayMonths >= 3 ? "healthy" : "watch" }, { label: "Collection rate", value: `${financials.ratios.collectionRate.toFixed(0)}%`, signal: financials.ratios.collectionRate >= 75 ? "healthy" : "watch" }, { label: "DSO estimado", value: `${financials.ratios.dsoDays.toFixed(0)} días`, signal: financials.ratios.dsoDays <= 30 ? "healthy" : "watch" }, { label: "Current ratio", value: financials.ratios.currentRatio ? `${financials.ratios.currentRatio.toFixed(1)}x` : "Sin deuda", signal: "healthy" }].map((ratio) => <p key={ratio.label}><span>{ratio.label}</span><strong>{ratio.value}</strong><em className={ratio.signal}>{ratio.signal}</em></p>)}</article></div>
+    </>}
+
+    {view === "ledger" && <div className="ledger-layout"><article className="panel ledger-table"><div className="panel-head"><div><span>SOURCE OF TRUTH</span><h2>Libro de movimientos</h2></div><b>{data.ledgerEntries.length}</b></div><div className="ledger-row ledger-head"><span>Fecha</span><span>Tipo</span><span>Descripción</span><span>Categoría</span><span>Monto</span></div>{data.ledgerEntries.map((entry) => <div className="ledger-row" key={entry.id}><span>{shortDate.format(new Date(`${entry.occurredOn}T00:00:00Z`))}</span><b className={entry.kind}>{entry.kind === "income" ? "INCOME" : "EXPENSE"}</b><p><strong>{entry.description}</strong><small>{entry.clientName || entry.source}</small></p><span>{entry.category}</span><strong className={entry.kind}>{entry.kind === "income" ? "+" : "−"}{money.format(entry.amount)}</strong></div>)}</article><form className="panel data-form ledger-form" onSubmit={submit}><div className="panel-head"><div><span>NEW MOVEMENT</span><h2>Registrar transacción</h2></div><b>＋</b></div><label className="entry-kind"><button type="button" className={form.kind === "income" ? "active" : ""} onClick={() => setForm({ ...form, kind: "income", category: "Servicios" })}>Ingreso</button><button type="button" className={form.kind === "expense" ? "active" : ""} onClick={() => setForm({ ...form, kind: "expense", category: "Software" })}>Gasto</button></label><Field label="Descripción" value={form.description} onChange={(value) => setForm({ ...form, description: value })} placeholder={form.kind === "income" ? "Ej. Pago de consultoría" : "Ej. Suscripción de software"} required /><div className="form-split"><Field label="Categoría" value={form.category} onChange={(value) => setForm({ ...form, category: value })} required /><Field label="Cliente (opcional)" value={form.clientName} onChange={(value) => setForm({ ...form, clientName: value })} /></div><div className="form-split"><NumberInput label="Monto" value={form.amount} onChange={(value) => setForm({ ...form, amount: value })} /><Field label="Fecha" type="date" value={form.occurredOn} onChange={(value) => setForm({ ...form, occurredOn: value })} required /></div><button className="form-submit" type="submit">Registrar y recalcular <span>→</span></button><small className="financial-disclaimer">Al guardar, se actualizan automáticamente los tres estados, ratios, forecast y respuestas de Copilot.</small></form></div>}
+    <p className="financial-disclaimer statement-disclaimer">Vista gerencial automatizada basada en los datos ingresados. No reemplaza estados financieros preparados o auditados por un contador.</p>
   </div>;
 }
 
@@ -280,6 +424,15 @@ function LeadsPanel({ data, mode, setData, mutate, setNotice, setError }: { data
     setNotice("Smart Intake copiado. Compártelo por WhatsApp, LinkedIn o tu web.");
   };
 
+  const downloadCsvTemplate = () => {
+    const template = "Marca temporal,Nombre,Email,Teléfono,Empresa,Servicio,Necesidad,Presupuesto\n2026-08-09,Ana Pérez,ana@example.com,+51 999 999 999,Estudio Demo,Consultoría,Ordenar ventas pricing y caja,2500";
+    const url = URL.createObjectURL(new Blob([template], { type: "text/csv;charset=utf-8" }));
+    const link = document.createElement("a");
+    link.href = url; link.download = "honora-google-forms-template.csv"; link.click();
+    URL.revokeObjectURL(url);
+    setNotice("Plantilla CSV descargada. Usa esos encabezados en tu Google Form / Sheet.");
+  };
+
   return <div className="workspace-content lead-workspace">
     <SectionHeader eyebrow="ACQUISITION · CRM · CONVERSION" title="Convierte consultas en revenue." copy="Un inbox comercial conectado: captura, califica, prioriza y convierte un lead en cliente + quote sin volver a copiar datos." action={<button className="primary-action" onClick={() => setView("capture")}>Agregar lead <span>＋</span></button>} />
     <div className="capture-toolbar">
@@ -293,40 +446,50 @@ function LeadsPanel({ data, mode, setData, mutate, setNotice, setError }: { data
 
     {view === "capture" && <div className="lead-capture-grid"><form className="panel data-form lead-form" onSubmit={submit}><div className="panel-head"><div><span>NEW OPPORTUNITY</span><h2>Captura y calificación</h2></div><b>AUTO-SCORE</b></div><div className="form-split"><Field label="Nombre" value={form.fullName} onChange={(value) => setForm({ ...form, fullName: value })} required /><Field label="Email" type="email" value={form.email} onChange={(value) => setForm({ ...form, email: value })} required /></div><div className="form-split"><Field label="WhatsApp" value={form.phone} onChange={(value) => setForm({ ...form, phone: value })} /><Field label="Negocio" value={form.business} onChange={(value) => setForm({ ...form, business: value })} /></div><label className="field"><span>Servicio</span><select value={form.service} onChange={(event) => setForm({ ...form, service: event.target.value })}><option>Estrategia / consultoría</option><option>Diseño / branding</option><option>Marketing / growth</option><option>Automatización / tecnología</option><option>Otro servicio profesional</option></select></label><label className="field"><span>Necesidad / resultado esperado</span><textarea minLength={20} value={form.challenge} onChange={(event) => setForm({ ...form, challenge: event.target.value })} required /></label><div className="form-split"><NumberInput label="Presupuesto" value={form.budget} onChange={(value) => setForm({ ...form, budget: value })} /><label className="field"><span>Timing</span><select value={form.urgency} onChange={(event) => setForm({ ...form, urgency: event.target.value as Lead["urgency"] })}><option value="7d">Esta semana</option><option value="30d">30 días</option><option value="90d">90 días</option><option value="exploring">Explorando</option></select></label></div><button className="form-submit" type="submit">Guardar y calificar <span>→</span></button></form><aside className="qualification-model"><span>QUALIFICATION ENGINE</span><h2>Fit Score / 100</h2><p>Prioriza usando señales operativas, no datos sensibles:</p><ul><li><b>34%</b> presupuesto declarado</li><li><b>24%</b> urgencia del proyecto</li><li><b>22%</b> claridad de la necesidad</li><li><b>20%</b> contexto de contacto</li></ul><small>El score sugiere prioridad; tú conservas la decisión final.</small></aside></div>}
 
-    {view === "import" && <div className="forms-bridge"><article><span>GOOGLE FORMS → HONORA</span><h2>Trae tus respuestas. Honora hace el resto.</h2><p>En Google Forms, vincula las respuestas a Sheets, descarga la hoja como CSV y suéltala aquí. Cada fila se convierte en un lead con score, fuente y siguiente acción.</p><label className="csv-drop"><b>＋</b><strong>Seleccionar CSV de respuestas</strong><small>Máximo 100 leads por importación</small><input type="file" accept=".csv,text/csv" onChange={(event) => void importCsv(event.target.files?.[0])} /></label></article><aside><span>MAPEO AUTOMÁTICO</span>{["Nombre / Name", "Correo / Email", "Teléfono / WhatsApp", "Servicio", "Necesidad / Problema", "Presupuesto / Budget"].map((field) => <div key={field}><b>✓</b>{field}</div>)}<small>Honora reconoce encabezados en español e inglés. Las filas incompletas se excluyen.</small></aside></div>}
+    {view === "import" && <div className="forms-bridge"><article><span>GOOGLE FORMS → HONORA</span><h2>Trae tus respuestas. Honora hace el resto.</h2><p>En Google Forms, vincula las respuestas a Sheets, descarga la hoja como CSV y suéltala aquí. Cada fila se convierte en un lead con score, fuente y siguiente acción.</p><label className="csv-drop"><b>＋</b><strong>Seleccionar CSV de respuestas</strong><small>Máximo 100 leads por importación</small><input type="file" accept=".csv,text/csv" onChange={(event) => void importCsv(event.target.files?.[0])} /></label></article><aside><span>MAPEO AUTOMÁTICO</span>{["Nombre / Name", "Correo / Email", "Teléfono / WhatsApp", "Servicio", "Necesidad / Problema", "Presupuesto / Budget"].map((field) => <div key={field}><b>✓</b>{field}</div>)}<small>Honora reconoce encabezados en español e inglés. Las filas incompletas se excluyen.</small><button className="template-download" onClick={downloadCsvTemplate}>Descargar plantilla CSV ↓</button></aside></div>}
   </div>;
 }
 
-function CopilotPanel({ data, mode }: { data: DashboardData; mode: "live" | "demo" }) {
-  const prompts = ["¿Qué hago esta semana?", "¿Quién me debe dinero?", "¿Qué lead respondo primero?", "¿Cuánto debería cobrar?", "¿Cómo estará mi caja en 13 semanas?"];
+function CopilotPanel({ data, mode, setData }: { data: DashboardData; mode: "live" | "demo"; setData: (data: DashboardData) => void }) {
+  const prompts = ["¿Qué hago esta semana?", "¿Cómo están mis estados financieros?", "¿Quién me debe dinero?", "¿Qué lead respondo primero?", "¿Cuánto me falta para mi meta?", "¿Cómo importo Google Forms?"];
   const [question, setQuestion] = useState("");
-  const [response, setResponse] = useState<CopilotResponse>(() => answerCopilot(prompts[0], data));
+  const [history, setHistory] = useState<CopilotConversation[]>(data.copilotHistory);
+  const [selectedId, setSelectedId] = useState(data.copilotHistory[0]?.id ?? "welcome");
   const [loading, setLoading] = useState(false);
+  const welcome = useMemo<CopilotConversation>(() => ({ id: "welcome", question: "Resumen ejecutivo de hoy", ...answerCopilot("¿Qué hago esta semana?", { ...data, copilotHistory: history }), createdAt: new Date().toISOString() }), [data, history]);
+  const selected = history.find((item) => item.id === selectedId) ?? welcome;
+  const conversationDate = new Intl.DateTimeFormat("es-PE", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
 
   const ask = async (value = question) => {
-    if (!value.trim()) return;
-    setQuestion(value);
+    const cleanQuestion = value.trim();
+    if (!cleanQuestion) return;
     setLoading(true);
     try {
-      if (mode === "demo") setResponse(answerCopilot(value, data));
-      else {
-        const result = await fetch("/api/copilot", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ question: value }) });
-        const payload = await result.json() as CopilotResponse & { error?: string };
+      let conversation: CopilotConversation;
+      if (mode === "demo") {
+        conversation = { id: demoId(), question: cleanQuestion, ...answerCopilot(cleanQuestion, { ...data, copilotHistory: history }), createdAt: new Date().toISOString() };
+      } else {
+        const result = await fetch("/api/copilot", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ question: cleanQuestion }) });
+        const payload = await result.json() as CopilotConversation & { error?: string };
         if (!result.ok) throw new Error(payload.error || "Copilot no pudo responder.");
-        setResponse(payload);
+        conversation = payload;
       }
-    } catch (error) {
-      setResponse({
-        intent: "plan_limit",
-        answer: error instanceof Error ? error.message : "Copilot no pudo responder.",
-        evidence: ["Tus datos permanecen guardados y disponibles en el workspace."],
-        next: "Activa Honora Pro para usar Copilot sin límites.",
-      });
+      const nextHistory = [conversation, ...history.filter((item) => item.id !== conversation.id)].slice(0, 30);
+      setHistory(nextHistory);
+      setSelectedId(conversation.id);
+      setQuestion("");
+      setData({ ...data, copilotHistory: nextHistory, workspace: { ...data.workspace, copilotQuestionsUsed: mode === "live" && data.workspace.plan === "free" ? data.workspace.copilotQuestionsUsed + 1 : data.workspace.copilotQuestionsUsed } });
+    } catch (caught) {
+      const conversation: CopilotConversation = { id: "error", question: cleanQuestion, intent: "plan_limit", answer: caught instanceof Error ? caught.message : "Copilot no pudo responder.", evidence: ["Tus datos permanecen guardados y disponibles en el workspace."], next: "Revisa el plan o intenta nuevamente.", createdAt: new Date().toISOString() };
+      setHistory([conversation, ...history]);
+      setSelectedId(conversation.id);
     } finally { setLoading(false); }
   };
 
-  return <div className="workspace-content copilot-workspace"><SectionHeader eyebrow="DATA-GROUNDED BUSINESS ASSISTANT" title="Pregunta. Decide. Avanza." copy="Honora Copilot responde con tu pipeline, pricing, cobros y cash forecast; cada recomendación muestra la evidencia utilizada." />
-    <div className="copilot-grid"><section className="copilot-chat"><div className="copilot-orb">H</div><div className="copilot-answer"><span>HONORA COPILOT · {response.intent.toUpperCase()}</span><h2>{response.answer}</h2><div className="evidence-stack"><small>EVIDENCIA</small>{response.evidence.map((item) => <p key={item}><b>↳</b>{item}</p>)}</div><div className="copilot-next"><span>NEXT BEST ACTION</span><strong>{response.next}</strong></div></div><form onSubmit={(event) => { event.preventDefault(); void ask(); }}><input value={question} onChange={(event) => setQuestion(event.target.value)} placeholder="Pregunta sobre ventas, precios, cobros o caja…" /><button disabled={loading}>{loading ? "…" : "→"}</button></form></section><aside className="copilot-side"><span>QUICK QUESTIONS</span>{prompts.map((prompt) => <button key={prompt} onClick={() => void ask(prompt)}>{prompt}<b>↗</b></button>)}<div><small>{data.workspace.plan === "pro" ? "PRIVATE BY DESIGN" : `${Math.max(0, 5 - data.workspace.copilotQuestionsUsed)} FREE QUESTIONS LEFT`}</small><p>El asistente analiza únicamente los datos de tu workspace. No inventa saldos ni reemplaza asesoría contable, legal o tributaria.</p></div></aside></div>
+  return <div className="workspace-content copilot-workspace"><SectionHeader eyebrow="DATA-GROUNDED BUSINESS ASSISTANT" title="Una memoria para tu negocio." copy="Pregunta sobre operación o finanzas. Cada conversación queda guardada con la evidencia utilizada y la siguiente acción recomendada." action={<button className="primary-action" onClick={() => { setSelectedId("welcome"); setQuestion(""); }}>Nueva conversación <span>＋</span></button>} />
+    <div className="copilot-layout"><aside className="copilot-history"><header><span>HISTORIAL</span><b>{history.length}</b></header>{history.length ? <div>{history.map((item) => <button key={item.id} className={selectedId === item.id ? "active" : ""} onClick={() => setSelectedId(item.id)}><span>H</span><p><strong>{item.question}</strong><small>{conversationDate.format(new Date(item.createdAt))} · {item.intent.replaceAll("_", " ")}</small></p></button>)}</div> : <EmptyState title="Sin conversaciones" copy="Tu primera pregunta aparecerá aquí." />}</aside>
+      <section className="copilot-chat"><div className="copilot-question-bubble"><span>TÚ</span><p>{selected.question}</p></div><div className="copilot-orb">H</div><div className="copilot-answer"><span>HONORA COPILOT · {selected.intent.toUpperCase().replaceAll("_", " ")}</span><h2>{selected.answer}</h2><div className="evidence-stack"><small>EVIDENCIA UTILIZADA</small>{selected.evidence.map((item) => <p key={item}><b>↳</b>{item}</p>)}</div><div className="copilot-next"><span>NEXT BEST ACTION</span><strong>{selected.next}</strong></div></div><form onSubmit={(event) => { event.preventDefault(); void ask(); }}><input value={question} onChange={(event) => setQuestion(event.target.value)} placeholder="Pregunta sobre ventas, estados financieros, cobros o cómo usar Honora…" /><button disabled={loading}>{loading ? "…" : "→"}</button></form></section>
+      <aside className="copilot-side"><span>QUICK QUESTIONS</span>{prompts.map((prompt) => <button key={prompt} onClick={() => void ask(prompt)}>{prompt}<b>↗</b></button>)}<div><small>{data.workspace.plan === "pro" ? "PRIVATE BY DESIGN" : `${Math.max(0, 5 - data.workspace.copilotQuestionsUsed)} FREE QUESTIONS LEFT`}</small><p>Copilot cruza pipeline, Ledger, estados financieros, pricing y caja. Las respuestas son operativas y no sustituyen asesoría contable, legal o tributaria.</p></div></aside></div>
   </div>;
 }
 
@@ -358,16 +521,20 @@ function CollectionsPanel({ data, mode, setData, mutate }: { data: DashboardData
     if (mode === "demo") {
       const invoice: Invoice = { id: demoId(), ...form, status: "pending", issuedAt: new Date().toISOString(), paidAt: null };
       const invoices = [...data.invoices, invoice];
-      const forecast = buildThirteenWeekForecast(data.workspace.cashReserve, data.workspace.monthlyFixedCosts / 4.33, invoices);
-      setData({ ...data, invoices, forecast, metrics: { ...data.metrics, accountsReceivable: data.metrics.accountsReceivable + invoice.amount, projectedCash13w: forecast.at(-1)?.closingCash ?? 0 } }); return;
+      const financials = buildFinancialStatements({ openingCash: data.workspace.cashReserve, monthlyFixedCosts: data.workspace.monthlyFixedCosts, reserveRate: data.workspace.reserveRate, entries: data.ledgerEntries, invoices, clients: data.clients });
+      const forecast = buildThirteenWeekForecast(financials.summary.closingCash, data.workspace.monthlyFixedCosts / 4.33, invoices);
+      setData({ ...data, invoices, financials, forecast, metrics: { ...data.metrics, accountsReceivable: financials.summary.accountsReceivable, projectedCash13w: forecast.at(-1)?.closingCash ?? 0 } }); return;
     }
     await mutate("/api/invoices", "POST", form, "Cuenta por cobrar registrada en el radar.");
   };
   const markPaid = async (invoice: Invoice) => {
     if (mode === "demo") {
       const invoices = data.invoices.map((item) => item.id === invoice.id ? { ...item, status: "paid" as const, paidAt: new Date().toISOString() } : item);
-      const forecast = buildThirteenWeekForecast(data.workspace.cashReserve, data.workspace.monthlyFixedCosts / 4.33, invoices);
-      setData({ ...data, invoices, forecast, metrics: { ...data.metrics, accountsReceivable: Math.max(0, data.metrics.accountsReceivable - invoice.amount), overdueAmount: invoice.status === "overdue" ? Math.max(0, data.metrics.overdueAmount - invoice.amount) : data.metrics.overdueAmount, projectedCash13w: forecast.at(-1)?.closingCash ?? 0 } }); return;
+      const entry: LedgerEntry = { id: demoId(), kind: "income", category: "Cobros", description: invoice.description, amount: invoice.amount, occurredOn: dateFromNow(0), source: "invoice", clientName: invoice.clientName, invoiceId: invoice.id };
+      const ledgerEntries = [entry, ...data.ledgerEntries];
+      const financials = buildFinancialStatements({ openingCash: data.workspace.cashReserve, monthlyFixedCosts: data.workspace.monthlyFixedCosts, reserveRate: data.workspace.reserveRate, entries: ledgerEntries, invoices, clients: data.clients });
+      const forecast = buildThirteenWeekForecast(financials.summary.closingCash, data.workspace.monthlyFixedCosts / 4.33, invoices);
+      setData({ ...data, invoices, ledgerEntries, financials, forecast, metrics: { ...data.metrics, accountsReceivable: financials.summary.accountsReceivable, overdueAmount: invoice.status === "overdue" ? Math.max(0, data.metrics.overdueAmount - invoice.amount) : data.metrics.overdueAmount, projectedCash13w: forecast.at(-1)?.closingCash ?? 0 } }); return;
     }
     await mutate("/api/invoices", "PATCH", { invoiceId: invoice.id }, "Cobro marcado como pagado.");
   };
@@ -418,14 +585,18 @@ function BillingPanel({ data, mode, setNotice, setError }: { data: DashboardData
 }
 
 function SettingsPanel({ data, mode, setData, mutate }: { data: DashboardData; mode: "live" | "demo"; setData: (data: DashboardData) => void; mutate: (path: string, method: "POST" | "PATCH", body: unknown, success: string) => Promise<boolean> }) {
-  const [form, setForm] = useState({ businessName: data.workspace.businessName, monthlyFixedCosts: data.workspace.monthlyFixedCosts, reserveRate: data.workspace.reserveRate, targetMargin: data.workspace.targetMargin, cashReserve: data.workspace.cashReserve, billableHours: data.workspace.billableHours });
+  const [form, setForm] = useState({ businessName: data.workspace.businessName, businessType: data.workspace.businessType, primaryService: data.workspace.primaryService, revenueGoal: data.workspace.revenueGoal, monthlyFixedCosts: data.workspace.monthlyFixedCosts, reserveRate: data.workspace.reserveRate, targetMargin: data.workspace.targetMargin, cashReserve: data.workspace.cashReserve, billableHours: data.workspace.billableHours });
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (mode === "demo") { setData({ ...data, workspace: { ...data.workspace, ...form } }); return; }
+    if (mode === "demo") {
+      const financials = buildFinancialStatements({ openingCash: form.cashReserve, monthlyFixedCosts: form.monthlyFixedCosts, reserveRate: form.reserveRate, entries: data.ledgerEntries, invoices: data.invoices, clients: data.clients });
+      const forecast = buildThirteenWeekForecast(financials.summary.closingCash, form.monthlyFixedCosts / 4.33, data.invoices);
+      setData({ ...data, workspace: { ...data.workspace, ...form }, financials, forecast, metrics: { ...data.metrics, projectedCash13w: forecast.at(-1)?.closingCash ?? financials.summary.closingCash } }); return;
+    }
     await mutate("/api/dashboard", "PATCH", form, "Configuración financiera actualizada.");
   };
   return <div className="workspace-content settings-content"><SectionHeader eyebrow="FINANCIAL SETTINGS" title="Define tu operating model." copy="Estos supuestos alimentan pricing, runway y cash forecast. Revísalos cuando cambie tu estructura." />
-    <form className="panel data-form settings-form" onSubmit={submit}><div className="panel-head"><div><span>WORKSPACE CONFIG</span><h2>Supuestos del negocio</h2></div><b>⚙</b></div><Field label="Nombre del negocio" value={form.businessName} onChange={(value) => setForm({ ...form, businessName: value })} required /><div className="form-split"><NumberInput label="Operating costs / mes" value={form.monthlyFixedCosts} onChange={(value) => setForm({ ...form, monthlyFixedCosts: value })} /><NumberInput label="Caja disponible" value={form.cashReserve} onChange={(value) => setForm({ ...form, cashReserve: value })} /></div><div className="form-split"><NumberInput label="Horas facturables / mes" value={form.billableHours} onChange={(value) => setForm({ ...form, billableHours: value })} suffix="h" /><NumberInput label="Reserva configurable" value={form.reserveRate} onChange={(value) => setForm({ ...form, reserveRate: Math.min(60, value) })} suffix="%" /></div><NumberInput label="Target margin" value={form.targetMargin} onChange={(value) => setForm({ ...form, targetMargin: Math.min(80, value) })} suffix="%" /><button className="form-submit" type="submit">Guardar configuración <span>→</span></button><p className="financial-disclaimer">Honora es una herramienta educativa de planificación. No sustituye asesoría contable, tributaria, legal ni de inversión.</p></form>
+    <form className="panel data-form settings-form" onSubmit={submit}><div className="panel-head"><div><span>WORKSPACE CONFIG</span><h2>Supuestos del negocio</h2></div><b>⚙</b></div><Field label="Nombre del negocio" value={form.businessName} onChange={(value) => setForm({ ...form, businessName: value })} required /><div className="form-split"><label className="field"><span>Tipo de negocio</span><select value={form.businessType} onChange={(event) => setForm({ ...form, businessType: event.target.value })}>{["Consultoría", "Creativo / diseño", "Tecnología", "Marketing", "Servicios profesionales", "Otro"].map((value) => <option key={value}>{value}</option>)}</select></label><Field label="Servicio principal" value={form.primaryService} onChange={(value) => setForm({ ...form, primaryService: value })} required /></div><div className="form-split"><NumberInput label="Meta de revenue / mes" value={form.revenueGoal} onChange={(value) => setForm({ ...form, revenueGoal: value })} /><NumberInput label="Operating costs / mes" value={form.monthlyFixedCosts} onChange={(value) => setForm({ ...form, monthlyFixedCosts: value })} /></div><div className="form-split"><NumberInput label="Opening cash del Ledger" value={form.cashReserve} onChange={(value) => setForm({ ...form, cashReserve: value })} /><NumberInput label="Horas facturables / mes" value={form.billableHours} onChange={(value) => setForm({ ...form, billableHours: value })} suffix="h" /></div><div className="form-split"><NumberInput label="Reserva tributaria" value={form.reserveRate} onChange={(value) => setForm({ ...form, reserveRate: Math.min(60, value) })} suffix="%" /><NumberInput label="Target margin" value={form.targetMargin} onChange={(value) => setForm({ ...form, targetMargin: Math.min(80, value) })} suffix="%" /></div><button className="form-submit" type="submit">Guardar y recalcular <span>→</span></button><p className="financial-disclaimer">Al guardar, se recalculan pricing, cash runway, forecast y estados gerenciales. No sustituye asesoría contable, tributaria, legal ni de inversión.</p></form>
   </div>;
 }
 

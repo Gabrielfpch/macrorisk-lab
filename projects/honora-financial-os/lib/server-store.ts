@@ -1,7 +1,8 @@
 import { and, asc, count, desc, eq, gte, lt, notInArray } from "drizzle-orm";
 import { getDb } from "../db";
-import { clients, invoices, leads, quotes, users, workspaces } from "../db/schema";
+import { clients, copilotConversations, invoices, leads, ledgerEntries, quotes, users, workspaces } from "../db/schema";
 import { answerCopilot, buildAutomationQueue, scoreLead, type LeadScoringInput, type LeadStatus } from "./client-to-cash";
+import { buildFinancialStatements, type LedgerKind } from "./financial-statements";
 import { buildThirteenWeekForecast, calculateDiagnostics, calculateHonoraScore, calculateProjectQuote, calculateRevenueRisk } from "./honora";
 
 export const FREE_LIMITS = { leads: 10, clients: 2, invoices: 5, quotes: 1 } as const;
@@ -12,6 +13,19 @@ const now = () => new Date().toISOString();
 const cleanEmail = (value: string) => value.trim().toLowerCase();
 const slugify = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "").slice(0, 42);
 const makeIntakeSlug = (name: string, id: string) => `${slugify(name) || "studio"}-${id.replace(/-/g, "").slice(0, 6)}`;
+const isoDateFromNow = (days: number) => {
+  const date = new Date();
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+};
+const safeJsonArray = (value: string) => {
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string") : [];
+  } catch {
+    return [];
+  }
+};
 
 export async function getOrCreateAccount(identity: AccountIdentity) {
   const db = getDb();
@@ -40,7 +54,9 @@ export async function getOrCreateAccount(identity: AccountIdentity) {
       id: crypto.randomUUID(), ownerId: user.id, businessName: "Mi negocio independiente",
       intakeSlug: makeIntakeSlug(identity.name || email.split("@")[0], user.id),
       monthlyFixedCosts: 1800, reserveRate: 8, targetMargin: 25, cashReserve: 8500,
-      billableHours: 80, plan: "free" as const, subscriptionStatus: "inactive",
+      billableHours: 80, revenueGoal: 10000, businessType: "Servicios profesionales",
+      primaryService: "Consultoría", onboardingCompleted: false,
+      plan: "free" as const, subscriptionStatus: "inactive",
       providerSubscriptionId: null, copilotQuestionsUsed: 0, copilotPeriod: null, createdAt, updatedAt: createdAt,
     };
     try {
@@ -68,11 +84,13 @@ export async function getDashboard(identity: AccountIdentity) {
     .set({ status: "overdue" })
     .where(and(eq(invoices.workspaceId, account.workspace.id), eq(invoices.status, "pending"), lt(invoices.dueDate, today)));
 
-  const [leadRows, clientRows, invoiceRows, quoteRows] = await Promise.all([
+  const [leadRows, clientRows, invoiceRows, quoteRows, ledgerRows, copilotRows] = await Promise.all([
     db.select().from(leads).where(eq(leads.workspaceId, account.workspace.id)).orderBy(desc(leads.score), desc(leads.createdAt)),
     db.select().from(clients).where(eq(clients.workspaceId, account.workspace.id)).orderBy(desc(clients.monthlyRevenue)),
     db.select().from(invoices).where(eq(invoices.workspaceId, account.workspace.id)).orderBy(asc(invoices.dueDate)),
     db.select().from(quotes).where(eq(quotes.workspaceId, account.workspace.id)).orderBy(desc(quotes.createdAt)),
+    db.select().from(ledgerEntries).where(eq(ledgerEntries.workspaceId, account.workspace.id)).orderBy(desc(ledgerEntries.occurredOn), desc(ledgerEntries.createdAt)),
+    db.select().from(copilotConversations).where(eq(copilotConversations.workspaceId, account.workspace.id)).orderBy(desc(copilotConversations.createdAt)).limit(30),
   ]);
 
   const activeClients = clientRows.filter((client) => client.status === "active");
@@ -85,12 +103,20 @@ export async function getDashboard(identity: AccountIdentity) {
   const averageTerms = activeClients.length
     ? activeClients.reduce((sum, client) => sum + client.paymentTermsDays, 0) / activeClients.length
     : 0;
+  const financials = buildFinancialStatements({
+    openingCash: account.workspace.cashReserve,
+    monthlyFixedCosts: account.workspace.monthlyFixedCosts,
+    reserveRate: account.workspace.reserveRate,
+    entries: ledgerRows,
+    invoices: invoiceRows,
+    clients: clientRows,
+  });
   const diagnostics = calculateDiagnostics({
     monthlyIncome,
     fixedCosts: account.workspace.monthlyFixedCosts,
     variableCosts: 0,
     debtPayments: 0,
-    cashReserve: account.workspace.cashReserve,
+    cashReserve: financials.summary.closingCash,
     billableHours: account.workspace.billableHours,
     reserveRate: account.workspace.reserveRate,
     targetMargin: account.workspace.targetMargin,
@@ -101,7 +127,7 @@ export async function getDashboard(identity: AccountIdentity) {
     averagePaymentDelay: averageTerms,
   }, monthlyIncome);
   const forecast = buildThirteenWeekForecast(
-    account.workspace.cashReserve,
+    financials.summary.closingCash,
     account.workspace.monthlyFixedCosts / 4.33,
     pendingInvoices.map((invoice) => ({ amount: invoice.amount, dueDate: invoice.dueDate, status: invoice.status })),
   );
@@ -118,12 +144,23 @@ export async function getDashboard(identity: AccountIdentity) {
     clients: clientRows,
     invoices: invoiceRows,
     quotes: quoteRows,
+    ledgerEntries: ledgerRows,
+    financials,
+    copilotHistory: copilotRows.map((row) => ({
+      id: row.id,
+      question: row.question,
+      intent: row.intent,
+      answer: row.answer,
+      evidence: safeJsonArray(row.evidenceJson),
+      next: row.nextAction,
+      createdAt: row.createdAt,
+    })),
     metrics: {
       monthlyIncome,
       accountsReceivable,
       overdueAmount,
       topClientShare,
-      projectedCash13w: forecast.at(-1)?.closingCash ?? account.workspace.cashReserve,
+      projectedCash13w: forecast.at(-1)?.closingCash ?? financials.summary.closingCash,
       honoraScore: calculateHonoraScore(diagnostics.coreScore, revenueRisk.stabilityScore),
       protectedHourlyRate: diagnostics.recommendedRate,
       pipelineValue,
@@ -133,6 +170,86 @@ export async function getDashboard(identity: AccountIdentity) {
     automations,
     limits: FREE_LIMITS,
   };
+}
+
+export async function completeOnboarding(identity: AccountIdentity, input: {
+  displayName: string;
+  businessName: string;
+  businessType: string;
+  primaryService: string;
+  revenueGoal: number;
+  monthlyFixedCosts: number;
+  cashReserve: number;
+  billableHours: number;
+  targetMargin: number;
+  reserveRate: number;
+  sampleData: boolean;
+}) {
+  const db = getDb();
+  const { user, workspace } = await getOrCreateAccount(identity);
+  const updatedAt = now();
+  await db.batch([
+    db.update(users).set({ name: input.displayName }).where(eq(users.id, user.id)),
+    db.update(workspaces).set({
+      businessName: input.businessName,
+      businessType: input.businessType,
+      primaryService: input.primaryService,
+      revenueGoal: input.revenueGoal,
+      monthlyFixedCosts: input.monthlyFixedCosts,
+      cashReserve: input.cashReserve,
+      billableHours: input.billableHours,
+      targetMargin: input.targetMargin,
+      reserveRate: input.reserveRate,
+      onboardingCompleted: true,
+      updatedAt,
+    }).where(eq(workspaces.id, workspace.id)),
+  ]);
+
+  if (input.sampleData) {
+    const [leadCount, clientCount, invoiceCount, quoteCount, ledgerCount] = await Promise.all([
+      db.select({ total: count() }).from(leads).where(eq(leads.workspaceId, workspace.id)),
+      db.select({ total: count() }).from(clients).where(eq(clients.workspaceId, workspace.id)),
+      db.select({ total: count() }).from(invoices).where(eq(invoices.workspaceId, workspace.id)),
+      db.select({ total: count() }).from(quotes).where(eq(quotes.workspaceId, workspace.id)),
+      db.select({ total: count() }).from(ledgerEntries).where(eq(ledgerEntries.workspaceId, workspace.id)),
+    ]);
+    const isEmpty = [leadCount, clientCount, invoiceCount, quoteCount, ledgerCount]
+      .every((result) => (result[0]?.total ?? 0) === 0);
+    if (isEmpty) await seedWorkspace(workspace.id, input.primaryService, input.targetMargin);
+  }
+}
+
+async function seedWorkspace(workspaceId: string, primaryService: string, targetMargin: number) {
+  const db = getDb();
+  const createdAt = now();
+  const clientOne = crypto.randomUUID();
+  const clientTwo = crypto.randomUUID();
+  const invoicePaid = crypto.randomUUID();
+  const invoiceOverdue = crypto.randomUUID();
+  const invoicePending = crypto.randomUUID();
+  const quoteInput = { hours: 32, hourlyRate: 95, externalCosts: 350, contingencyRate: 10, targetMargin };
+  const quote = calculateProjectQuote(quoteInput);
+  const sampleLeads = [
+    leadRow(workspaceId, { fullName: "Mariana Torres", email: "mariana@alturalabs.pe", phone: "+51 987 123 456", business: "Altura Labs", service: primaryService, challenge: "Necesitamos ordenar el proceso comercial y automatizar el onboarding para atender más clientes sin aumentar tareas manuales.", budget: 6200, urgency: "7d", source: "honora_form" }),
+    leadRow(workspaceId, { fullName: "Diego Salazar", email: "diego@norte.pe", business: "Norte Arquitectura", service: "Estrategia y pricing", challenge: "Buscamos validar precios y una propuesta B2B para la siguiente campaña comercial.", budget: 3200, urgency: "30d", source: "google_forms_csv" }),
+    leadRow(workspaceId, { fullName: "Valeria Ruiz", email: "valeria@example.com", service: "Branding", challenge: "Quiero evaluar opciones para actualizar mi marca personal.", budget: 900, urgency: "90d", source: "manual" }),
+  ];
+
+  await db.batch([
+    db.insert(leads).values(sampleLeads),
+    db.insert(clients).values({ id: clientOne, workspaceId, name: "Estudio Norte", email: "finanzas@estudionorte.pe", monthlyRevenue: 3900, paymentTermsDays: 30, status: "active", createdAt }),
+    db.insert(clients).values({ id: clientTwo, workspaceId, name: "Páramo Digital", email: "hola@paramo.pe", monthlyRevenue: 2800, paymentTermsDays: 15, status: "active", createdAt }),
+    db.insert(invoices).values({ id: invoicePaid, workspaceId, clientId: clientOne, clientName: "Estudio Norte", description: "Retainer de estrategia", amount: 2600, dueDate: isoDateFromNow(-7), status: "paid", issuedAt: createdAt, paidAt: createdAt }),
+    db.insert(invoices).values({ id: invoiceOverdue, workspaceId, clientId: clientTwo, clientName: "Páramo Digital", description: "Sprint de automatización", amount: 1200, dueDate: isoDateFromNow(-4), status: "overdue", issuedAt: createdAt, paidAt: null }),
+    db.insert(invoices).values({ id: invoicePending, workspaceId, clientId: clientOne, clientName: "Estudio Norte", description: "Implementación fase 2", amount: 1800, dueDate: isoDateFromNow(12), status: "pending", issuedAt: createdAt, paidAt: null }),
+    db.insert(quotes).values({ id: crypto.randomUUID(), workspaceId, clientName: "Altura Labs", projectName: primaryService, ...quoteInput, total: quote.total, status: "draft", createdAt }),
+    db.insert(ledgerEntries).values({ id: crypto.randomUUID(), workspaceId, kind: "income", category: "Servicios", description: "Pago de Estudio Norte", amount: 2600, occurredOn: isoDateFromNow(-2), source: "invoice", clientName: "Estudio Norte", invoiceId: invoicePaid, createdAt }),
+    db.insert(ledgerEntries).values({ id: crypto.randomUUID(), workspaceId, kind: "income", category: "Consultoría", description: "Asesoría estratégica", amount: 1800, occurredOn: isoDateFromNow(-12), source: "onboarding", clientName: "Lucía Benavides", invoiceId: null, createdAt }),
+    db.insert(ledgerEntries).values({ id: crypto.randomUUID(), workspaceId, kind: "income", category: "Servicios", description: "Proyecto de automatización", amount: 2300, occurredOn: isoDateFromNow(-35), source: "onboarding", clientName: "Páramo Digital", invoiceId: null, createdAt }),
+    db.insert(ledgerEntries).values({ id: crypto.randomUUID(), workspaceId, kind: "expense", category: "Software", description: "Herramientas y suscripciones", amount: 420, occurredOn: isoDateFromNow(-3), source: "onboarding", clientName: null, invoiceId: null, createdAt }),
+    db.insert(ledgerEntries).values({ id: crypto.randomUUID(), workspaceId, kind: "expense", category: "Marketing", description: "Campaña de captación", amount: 650, occurredOn: isoDateFromNow(-8), source: "onboarding", clientName: null, invoiceId: null, createdAt }),
+    db.insert(ledgerEntries).values({ id: crypto.randomUUID(), workspaceId, kind: "expense", category: "Operaciones", description: "Servicios administrativos", amount: 780, occurredOn: isoDateFromNow(-38), source: "onboarding", clientName: null, invoiceId: null, createdAt }),
+  ]);
 }
 
 export async function assertPlanLimit(identity: AccountIdentity, resource: keyof typeof FREE_LIMITS) {
@@ -313,7 +430,19 @@ export async function askCopilot(identity: AccountIdentity, question: string) {
     await db.update(workspaces).set({ copilotQuestionsUsed: used + 1, copilotPeriod: period, updatedAt: now() })
       .where(eq(workspaces.id, workspace.id));
   }
-  return answerCopilot(question, await getDashboard(identity));
+  const response = answerCopilot(question, await getDashboard(identity));
+  const row = {
+    id: crypto.randomUUID(),
+    workspaceId: workspace.id,
+    question,
+    intent: response.intent,
+    answer: response.answer,
+    evidenceJson: JSON.stringify(response.evidence),
+    nextAction: response.next,
+    createdAt: now(),
+  };
+  await db.insert(copilotConversations).values(row);
+  return { id: row.id, question, ...response, createdAt: row.createdAt };
 }
 
 export async function createClient(identity: AccountIdentity, input: { name: string; email?: string; monthlyRevenue: number; paymentTermsDays: number }) {
@@ -343,8 +472,43 @@ export async function createInvoice(identity: AccountIdentity, input: { clientId
 export async function markInvoicePaid(identity: AccountIdentity, invoiceId: string) {
   const db = getDb();
   const { workspace } = await getOrCreateAccount(identity);
-  await db.update(invoices).set({ status: "paid", paidAt: now() })
-    .where(and(eq(invoices.id, invoiceId), eq(invoices.workspaceId, workspace.id)));
+  const invoice = (await db.select().from(invoices).where(and(eq(invoices.id, invoiceId), eq(invoices.workspaceId, workspace.id))).limit(1))[0];
+  if (!invoice) {
+    const error = new Error("Cuenta por cobrar no encontrada.");
+    Object.assign(error, { status: 404, code: "INVOICE_NOT_FOUND" });
+    throw error;
+  }
+  if (invoice.status === "paid") return;
+  const paidAt = now();
+  await db.batch([
+    db.update(invoices).set({ status: "paid", paidAt })
+      .where(and(eq(invoices.id, invoiceId), eq(invoices.workspaceId, workspace.id))),
+    db.insert(ledgerEntries).values({
+      id: crypto.randomUUID(), workspaceId: workspace.id, kind: "income", category: "Cobros",
+      description: invoice.description, amount: invoice.amount, occurredOn: paidAt.slice(0, 10),
+      source: "invoice", clientName: invoice.clientName, invoiceId: invoice.id, createdAt: paidAt,
+    }),
+  ]);
+}
+
+export async function createLedgerEntry(identity: AccountIdentity, input: {
+  kind: LedgerKind;
+  category: string;
+  description: string;
+  amount: number;
+  occurredOn: string;
+  clientName?: string;
+}) {
+  const db = getDb();
+  const { workspace } = await getOrCreateAccount(identity);
+  const row = {
+    id: crypto.randomUUID(), workspaceId: workspace.id, kind: input.kind,
+    category: input.category.trim(), description: input.description.trim(), amount: input.amount,
+    occurredOn: input.occurredOn, source: "manual" as const, clientName: input.clientName?.trim() || null,
+    invoiceId: null, createdAt: now(),
+  };
+  await db.insert(ledgerEntries).values(row);
+  return row;
 }
 
 export async function createQuote(identity: AccountIdentity, input: {
@@ -361,6 +525,7 @@ export async function createQuote(identity: AccountIdentity, input: {
 export async function updateWorkspace(identity: AccountIdentity, input: {
   businessName: string; monthlyFixedCosts: number; reserveRate: number;
   targetMargin: number; cashReserve: number; billableHours: number;
+  revenueGoal: number; businessType: string; primaryService: string;
 }) {
   const db = getDb();
   const { workspace } = await getOrCreateAccount(identity);
