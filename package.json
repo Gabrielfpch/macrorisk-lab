@@ -1,9 +1,9 @@
 {
   "name": "macrorisk-lab",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "type": "module",
-  "description": "Interactive portfolio risk, macro scenario, and Monte Carlo simulator.",
+  "description": "Laboratorio cuantitativo de portfolio construction, correlation, risk decomposition, stress testing y Monte Carlo.",
   "scripts": {
     "test": "node --test",
     "check": "node --check app.js && node --check src/finance.js"

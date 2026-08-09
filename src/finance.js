@@ -1,104 +1,200 @@
 export const ASSETS = [
-  { id: "globalEquity", name: "Global Equity", ticker: "ACWI", color: "#60f5bd", expectedReturn: 0.085, volatility: 0.17 },
-  { id: "tech", name: "US Technology", ticker: "QQQ", color: "#6eb5ff", expectedReturn: 0.105, volatility: 0.235 },
-  { id: "bonds", name: "Treasury Bonds", ticker: "IEF", color: "#b58cff", expectedReturn: 0.045, volatility: 0.075 },
-  { id: "tips", name: "Inflation Bonds", ticker: "TIPS", color: "#ffcf62", expectedReturn: 0.043, volatility: 0.065 },
-  { id: "gold", name: "Gold", ticker: "GLD", color: "#ff9b64", expectedReturn: 0.055, volatility: 0.16 },
-  { id: "reits", name: "Global REITs", ticker: "REIT", color: "#ff6f9f", expectedReturn: 0.07, volatility: 0.19 },
-  { id: "cash", name: "Short Treasury", ticker: "SGOV", color: "#8aa59d", expectedReturn: 0.035, volatility: 0.012 },
+  { id: "globalEquity", name: "Renta variable global", ticker: "ACWI", sleeve: "Growth", color: "#44f2b2", expectedReturn: 0.082, volatility: 0.165 },
+  { id: "tech", name: "Tecnología USA", ticker: "QQQ", sleeve: "Growth", color: "#4da6ff", expectedReturn: 0.105, volatility: 0.235 },
+  { id: "emerging", name: "Mercados emergentes", ticker: "EEM", sleeve: "Growth", color: "#7c6cff", expectedReturn: 0.09, volatility: 0.22 },
+  { id: "bonds", name: "US Treasuries 7–10Y", ticker: "IEF", sleeve: "Defensive", color: "#b98cff", expectedReturn: 0.045, volatility: 0.075 },
+  { id: "tips", name: "Inflation-linked bonds", ticker: "TIP", sleeve: "Real assets", color: "#ffd166", expectedReturn: 0.043, volatility: 0.065 },
+  { id: "gold", name: "Oro", ticker: "GLD", sleeve: "Real assets", color: "#ff9c5a", expectedReturn: 0.055, volatility: 0.16 },
+  { id: "reits", name: "Real Estate", ticker: "VNQ", sleeve: "Real assets", color: "#ff6f91", expectedReturn: 0.072, volatility: 0.19 },
+  { id: "cash", name: "T-Bills", ticker: "SGOV", sleeve: "Defensive", color: "#8ca3a0", expectedReturn: 0.035, volatility: 0.012 },
 ];
 
 export const CORRELATIONS = [
-  [1.00, 0.82, -0.12, 0.02, 0.06, 0.67, 0.02],
-  [0.82, 1.00, -0.18, -0.03, -0.02, 0.56, 0.01],
-  [-0.12, -0.18, 1.00, 0.72, 0.18, -0.08, 0.34],
-  [0.02, -0.03, 0.72, 1.00, 0.28, 0.02, 0.28],
-  [0.06, -0.02, 0.18, 0.28, 1.00, 0.12, 0.05],
-  [0.67, 0.56, -0.08, 0.02, 0.12, 1.00, 0.01],
-  [0.02, 0.01, 0.34, 0.28, 0.05, 0.01, 1.00],
+  [1.00, 0.82, 0.78, -0.12, 0.02, 0.06, 0.67, 0.02],
+  [0.82, 1.00, 0.65, -0.18, -0.03, -0.02, 0.56, 0.01],
+  [0.78, 0.65, 1.00, -0.08, 0.05, 0.12, 0.58, 0.01],
+  [-0.12, -0.18, -0.08, 1.00, 0.72, 0.18, -0.08, 0.34],
+  [0.02, -0.03, 0.05, 0.72, 1.00, 0.28, 0.02, 0.28],
+  [0.06, -0.02, 0.12, 0.18, 0.28, 1.00, 0.12, 0.05],
+  [0.67, 0.56, 0.58, -0.08, 0.02, 0.12, 1.00, 0.01],
+  [0.02, 0.01, 0.01, 0.34, 0.28, 0.05, 0.01, 1.00],
 ];
 
+export const FACTOR_LOADINGS = {
+  Growth: [1.00, 0.95, 0.85, 0.15, 0.20, 0.25, 0.65, 0.05],
+  "Inflation hedge": [0.25, 0.10, 0.35, 0.15, 0.90, 1.00, 0.70, 0.20],
+  Defensive: [0.35, 0.15, 0.20, 0.95, 0.80, 0.75, 0.25, 1.00],
+  Liquidity: [0.75, 0.85, 0.55, 0.80, 0.75, 0.90, 0.45, 1.00],
+  Duration: [0.30, 0.55, 0.25, 1.00, 0.70, 0.10, 0.65, 0.05],
+};
+
 export const PRESETS = {
-  Balanced: [35, 15, 20, 10, 8, 7, 5],
-  Growth: [43, 32, 5, 3, 5, 10, 2],
-  Defensive: [20, 5, 30, 15, 12, 3, 15],
-  "Inflation shield": [25, 10, 10, 20, 18, 12, 5],
+  "Core 60/40": [38, 12, 8, 24, 5, 5, 5, 3],
+  Growth: [35, 32, 15, 5, 2, 3, 7, 1],
+  "All Weather": [22, 8, 5, 25, 15, 12, 8, 5],
+  "Inflation Hedge": [20, 8, 7, 8, 22, 18, 12, 5],
+  "Capital Preservation": [12, 3, 3, 30, 15, 10, 2, 25],
 };
 
 export const SCENARIOS = [
   {
     id: "soft-landing",
     name: "Soft landing",
-    description: "Inflation cools without a deep contraction. Risk assets advance while bond returns remain positive.",
-    shocks: [0.10, 0.14, 0.035, 0.04, 0.02, 0.07, 0.038],
-    signal: "Growth resilient",
-    policy: "Gradual easing",
+    description: "La inflación converge sin una contracción profunda. Los activos de riesgo avanzan y los bonos conservan carry positivo.",
+    shocks: [0.10, 0.14, 0.09, 0.035, 0.04, 0.02, 0.07, 0.038],
+    signal: "Growth resiliente",
+    policy: "Easing gradual",
+    probability: "Base case",
   },
   {
-    id: "inflation-shock",
-    name: "Inflation resurgence",
-    description: "Price pressures reaccelerate and yields rise. Duration and high-multiple assets absorb the largest shock.",
-    shocks: [-0.12, -0.18, -0.15, 0.06, 0.12, -0.08, 0.042],
-    signal: "Inflation up",
-    policy: "Rates higher",
+    id: "stagflation",
+    name: "Stagflation",
+    description: "La inflación se reacelera mientras el crecimiento pierde fuerza. Duration y múltiplos altos reciben el mayor golpe.",
+    shocks: [-0.15, -0.22, -0.18, -0.13, 0.08, 0.15, -0.12, 0.045],
+    signal: "Inflation ↑ / Growth ↓",
+    policy: "Higher for longer",
+    probability: "Tail risk",
   },
   {
     id: "recession",
     name: "Global recession",
-    description: "Demand contracts sharply. Equities and real estate fall while sovereign bonds and defensive assets rally.",
-    shocks: [-0.25, -0.30, 0.12, 0.04, 0.08, -0.20, 0.035],
+    description: "La demanda se contrae con fuerza. Equities y Real Estate caen mientras Treasuries y activos defensivos amortiguan el shock.",
+    shocks: [-0.27, -0.33, -0.31, 0.13, 0.04, 0.09, -0.23, 0.035],
     signal: "Growth shock",
     policy: "Emergency cuts",
+    probability: "Stress case",
   },
   {
     id: "rate-cuts",
     name: "Aggressive rate cuts",
-    description: "Disinflation gives central banks room to ease quickly, supporting duration-sensitive assets and real estate.",
-    shocks: [0.08, 0.12, 0.15, 0.08, 0.06, 0.14, 0.025],
+    description: "La desinflación permite recortes rápidos. Duration, Technology y Real Estate capturan la mayor convexidad positiva.",
+    shocks: [0.08, 0.13, 0.09, 0.15, 0.08, 0.06, 0.14, 0.025],
     signal: "Disinflation",
     policy: "Fast easing",
+    probability: "Bull case",
   },
   {
     id: "ai-boom",
     name: "AI productivity boom",
-    description: "A technology-led productivity surprise drives earnings expectations and expands growth-asset valuations.",
-    shocks: [0.18, 0.35, -0.04, -0.02, -0.05, 0.06, 0.038],
-    signal: "Productivity up",
-    policy: "Neutral",
+    description: "Una sorpresa de productividad eleva las expectativas de beneficios y expande las valuaciones de activos Growth.",
+    shocks: [0.19, 0.36, 0.16, -0.04, -0.02, -0.05, 0.07, 0.038],
+    signal: "Productivity ↑",
+    policy: "Neutral bias",
+    probability: "Upside case",
+  },
+  {
+    id: "usd-shock",
+    name: "USD liquidity shock",
+    description: "Un flight-to-quality fortalece al dólar, comprime liquidez global y castiga especialmente a Emerging Markets y Real Estate.",
+    shocks: [-0.14, -0.12, -0.28, 0.07, -0.03, 0.05, -0.16, 0.04],
+    signal: "Liquidity ↓",
+    policy: "Defensive USD",
+    probability: "Liquidity risk",
   },
 ];
 
+const round = (value, digits = 10) => Number(value.toFixed(digits));
+const clamp = (value, minimum, maximum) => Math.min(maximum, Math.max(minimum, value));
+
 export function normalizeWeights(weights) {
-  const clean = weights.map((weight) => Math.max(0, Number(weight) || 0));
+  const clean = ASSETS.map((_, index) => Math.max(0, Number(weights[index]) || 0));
   const total = clean.reduce((sum, weight) => sum + weight, 0);
-  if (total === 0) return clean.map((_, index) => (index === clean.length - 1 ? 100 : 0));
-  const normalized = clean.map((weight) => (weight / total) * 100);
-  const roundingGap = 100 - normalized.reduce((sum, weight) => sum + weight, 0);
-  normalized[normalized.length - 1] += roundingGap;
+  if (total <= Number.EPSILON) return clean.map((_, index) => (index === clean.length - 1 ? 100 : 0));
+
+  const normalized = clean.map((weight) => round((weight / total) * 100, 1));
+  const gap = round(100 - normalized.reduce((sum, weight) => sum + weight, 0), 1);
+  const correctionIndex = normalized.indexOf(Math.max(...normalized));
+  normalized[correctionIndex] = round(normalized[correctionIndex] + gap, 1);
   return normalized;
 }
 
-export function calculatePortfolioMetrics(weights, riskFreeRate = 0.035) {
-  const normalized = normalizeWeights(weights).map((weight) => weight / 100);
-  const expectedReturn = normalized.reduce((sum, weight, index) => sum + weight * ASSETS[index].expectedReturn, 0);
+export function rebalanceWeight(weights, changedIndex, requestedValue) {
+  const current = normalizeWeights(weights);
+  const nextValue = round(clamp(Number(requestedValue) || 0, 0, 100), 1);
+  const targetForOthers = round(100 - nextValue, 1);
+  const result = [...current];
+  result[changedIndex] = nextValue;
 
-  let variance = 0;
-  for (let i = 0; i < ASSETS.length; i += 1) {
-    for (let j = 0; j < ASSETS.length; j += 1) {
-      variance += normalized[i] * normalized[j] * ASSETS[i].volatility * ASSETS[j].volatility * CORRELATIONS[i][j];
-    }
+  const otherIndexes = result.map((_, index) => index).filter((index) => index !== changedIndex);
+  const currentOtherTotal = otherIndexes.reduce((sum, index) => sum + current[index], 0);
+
+  if (targetForOthers === 0) {
+    otherIndexes.forEach((index) => { result[index] = 0; });
+    return result;
   }
 
+  if (currentOtherTotal <= Number.EPSILON) {
+    otherIndexes.forEach((index) => { result[index] = 0; });
+    const fallbackIndex = otherIndexes.includes(ASSETS.length - 1) ? ASSETS.length - 1 : otherIndexes[0];
+    result[fallbackIndex] = targetForOthers;
+    return result;
+  }
+
+  otherIndexes.forEach((index) => {
+    result[index] = round((current[index] / currentOtherTotal) * targetForOthers, 1);
+  });
+  const gap = round(100 - result.reduce((sum, weight) => sum + weight, 0), 1);
+  const correctionIndex = otherIndexes.reduce((best, index) => result[index] > result[best] ? index : best, otherIndexes[0]);
+  result[correctionIndex] = round(result[correctionIndex] + gap, 1);
+  return result;
+}
+
+export function getCovarianceMatrix() {
+  return CORRELATIONS.map((row, rowIndex) => row.map((correlation, columnIndex) => (
+    correlation * ASSETS[rowIndex].volatility * ASSETS[columnIndex].volatility
+  )));
+}
+
+function normalCdf(value) {
+  const sign = value < 0 ? -1 : 1;
+  const absolute = Math.abs(value) / Math.sqrt(2);
+  const t = 1 / (1 + 0.3275911 * absolute);
+  const coefficients = [0.254829592, -0.284496736, 1.421413741, -1.453152027, 1.061405429];
+  const polynomial = coefficients.reduceRight((accumulator, coefficient) => (accumulator * t) + coefficient, 0) * t;
+  const erf = sign * (1 - polynomial * Math.exp(-(absolute ** 2)));
+  return 0.5 * (1 + erf);
+}
+
+export function calculatePortfolioMetrics(weights, riskFreeRate = 0.035) {
+  const percentages = normalizeWeights(weights);
+  const normalized = percentages.map((weight) => weight / 100);
+  const covariance = getCovarianceMatrix();
+  const expectedReturn = normalized.reduce((sum, weight, index) => sum + weight * ASSETS[index].expectedReturn, 0);
+  const covarianceTimesWeights = covariance.map((row) => row.reduce((sum, value, index) => sum + value * normalized[index], 0));
+  const variance = normalized.reduce((sum, weight, index) => sum + weight * covarianceTimesWeights[index], 0);
   const volatility = Math.sqrt(Math.max(variance, 0));
   const sharpe = volatility > 0 ? (expectedReturn - riskFreeRate) / volatility : 0;
   const valueAtRisk = Math.max(0, 1.644854 * volatility - expectedReturn);
   const conditionalVaR = Math.max(0, 2.062713 * volatility - expectedReturn);
   const standaloneRisk = normalized.reduce((sum, weight, index) => sum + weight * ASSETS[index].volatility, 0);
   const diversificationBenefit = standaloneRisk > 0 ? 1 - volatility / standaloneRisk : 0;
-  const effectiveAssets = 1 / normalized.reduce((sum, weight) => sum + weight ** 2, 0);
-  const diversificationScore = Math.max(0, Math.min(100, (diversificationBenefit * 0.55 + (effectiveAssets - 1) / 6 * 0.45) * 100));
+  const hhi = normalized.reduce((sum, weight) => sum + weight ** 2, 0);
+  const effectiveAssets = hhi > 0 ? 1 / hhi : 0;
+  const diversificationScore = clamp((diversificationBenefit * 0.52 + ((effectiveAssets - 1) / (ASSETS.length - 1)) * 0.48) * 100, 0, 100);
+  const riskContributions = normalized.map((weight, index) => variance > 0 ? (weight * covarianceTimesWeights[index]) / variance : 0);
+  const marginalRisk = covarianceTimesWeights.map((value) => volatility > 0 ? value / volatility : 0);
+  const globalVariance = covariance[0][0];
+  const beta = globalVariance > 0 ? normalized.reduce((sum, weight, index) => sum + weight * covariance[index][0], 0) / globalVariance : 0;
+  const probabilityOfLoss = volatility > 0 ? normalCdf(-expectedReturn / volatility) : 0;
+  const stressDrawdown = clamp(1.75 * volatility - 0.25 * expectedReturn, 0, 0.75);
 
-  return { expectedReturn, volatility, sharpe, valueAtRisk, conditionalVaR, diversificationScore, effectiveAssets };
+  return {
+    weights: percentages,
+    expectedReturn,
+    volatility,
+    sharpe,
+    valueAtRisk,
+    conditionalVaR,
+    diversificationScore,
+    diversificationBenefit,
+    effectiveAssets,
+    hhi,
+    beta,
+    probabilityOfLoss,
+    stressDrawdown,
+    riskContributions,
+    marginalRisk,
+  };
 }
 
 export function calculateScenario(weights, scenarioId) {
@@ -107,6 +203,14 @@ export function calculateScenario(weights, scenarioId) {
   const contributions = normalized.map((weight, index) => weight * scenario.shocks[index]);
   const impact = contributions.reduce((sum, contribution) => sum + contribution, 0);
   return { scenario, contributions, impact };
+}
+
+export function calculateFactorExposures(weights) {
+  const normalized = normalizeWeights(weights).map((weight) => weight / 100);
+  return Object.entries(FACTOR_LOADINGS).map(([name, loadings]) => ({
+    name,
+    value: loadings.reduce((sum, loading, index) => sum + loading * normalized[index], 0),
+  }));
 }
 
 function mulberry32(seed) {
@@ -134,21 +238,52 @@ function percentile(sortedValues, probability) {
   return sortedValues[lower] + (sortedValues[upper] - sortedValues[lower]) * (index - lower);
 }
 
+export function generateEfficientFrontier(riskFreeRate = 0.035, options = {}) {
+  const { samples = 900, seed = 20260808 } = options;
+  const random = mulberry32(seed);
+  const points = [];
+
+  for (let sample = 0; sample < samples; sample += 1) {
+    const raw = ASSETS.map(() => -Math.log(Math.max(random(), Number.EPSILON)));
+    const total = raw.reduce((sum, value) => sum + value, 0);
+    const weights = raw.map((value) => (value / total) * 100);
+    const metrics = calculatePortfolioMetrics(weights, riskFreeRate);
+    points.push({ weights: metrics.weights, return: metrics.expectedReturn, volatility: metrics.volatility, sharpe: metrics.sharpe });
+  }
+
+  const sorted = [...points].sort((a, b) => a.volatility - b.volatility || b.return - a.return);
+  const frontier = [];
+  let bestReturn = -Infinity;
+  for (const point of sorted) {
+    if (point.return > bestReturn + 0.00025) {
+      frontier.push(point);
+      bestReturn = point.return;
+    }
+  }
+
+  const maxSharpe = points.reduce((best, point) => point.sharpe > best.sharpe ? point : best, points[0]);
+  const minVolatility = points.reduce((best, point) => point.volatility < best.volatility ? point : best, points[0]);
+  return { points, frontier, maxSharpe, minVolatility };
+}
+
 export function runMonteCarlo(weights, options = {}) {
   const {
     initialCapital = 1000,
     monthlyContribution = 200,
+    goal = 100000,
     years = 10,
-    simulations = 2000,
+    simulations = 3000,
     seed = 83979427,
   } = options;
   const { expectedReturn, volatility } = calculatePortfolioMetrics(weights, 0);
-  const months = Math.max(1, Math.round(years * 12));
+  const safeYears = Math.max(1, Math.round(years));
+  const months = safeYears * 12;
   const monthlyDrift = (expectedReturn - 0.5 * volatility ** 2) / 12;
   const monthlyVolatility = volatility / Math.sqrt(12);
   const random = mulberry32(seed);
   const terminalValues = [];
-  const checkpoints = Array.from({ length: years + 1 }, () => []);
+  const checkpoints = Array.from({ length: safeYears + 1 }, () => []);
+  const investedCapital = Math.max(0, initialCapital) + Math.max(0, monthlyContribution) * months;
 
   for (let simulation = 0; simulation < simulations; simulation += 1) {
     let value = Math.max(0, initialCapital);
@@ -166,34 +301,45 @@ export function runMonteCarlo(weights, options = {}) {
     values.sort((a, b) => a - b);
     return {
       year,
-      low: percentile(values, 0.1),
-      median: percentile(values, 0.5),
-      high: percentile(values, 0.9),
+      low: percentile(values, 0.10),
+      median: percentile(values, 0.50),
+      high: percentile(values, 0.90),
     };
   });
 
   return {
-    low: percentile(terminalValues, 0.1),
-    median: percentile(terminalValues, 0.5),
-    high: percentile(terminalValues, 0.9),
+    low: percentile(terminalValues, 0.10),
+    median: percentile(terminalValues, 0.50),
+    high: percentile(terminalValues, 0.90),
+    goalProbability: terminalValues.filter((value) => value >= goal).length / simulations,
+    capitalLossProbability: terminalValues.filter((value) => value < investedCapital).length / simulations,
+    investedCapital,
     paths,
   };
 }
 
+export function classifyPortfolio(metrics) {
+  if (metrics.volatility >= 0.16 || metrics.beta >= 1.05) return { label: "Aggressive Growth", tone: "high" };
+  if (metrics.volatility >= 0.115 || metrics.beta >= 0.78) return { label: "Moderado dinámico", tone: "medium" };
+  if (metrics.volatility >= 0.07) return { label: "Balanced", tone: "balanced" };
+  return { label: "Capital Preservation", tone: "low" };
+}
+
 export function getPortfolioInsights(weights, metrics) {
-  const normalized = normalizeWeights(weights);
-  const ranked = normalized.map((weight, index) => ({ weight, asset: ASSETS[index] })).sort((a, b) => b.weight - a.weight);
-  const equityWeight = normalized[0] + normalized[1] + normalized[5];
-  const defensiveWeight = normalized[2] + normalized[3] + normalized[4] + normalized[6];
+  const ranked = metrics.weights.map((weight, index) => ({ weight, asset: ASSETS[index], risk: metrics.riskContributions[index] })).sort((a, b) => b.weight - a.weight);
+  const riskRanked = [...ranked].sort((a, b) => b.risk - a.risk);
+  const growthWeight = metrics.weights[0] + metrics.weights[1] + metrics.weights[2] + metrics.weights[6];
+  const defensiveWeight = metrics.weights[3] + metrics.weights[4] + metrics.weights[5] + metrics.weights[7];
   const insights = [];
 
-  insights.push(`<strong>${ranked[0].asset.name}</strong> is the largest allocation at ${ranked[0].weight.toFixed(1)}%, so it is the portfolio's main source of both return and concentration risk.`);
-  if (equityWeight >= 65) insights.push(`<strong>Growth sensitivity is high.</strong> ${equityWeight.toFixed(1)}% is allocated to equity-like assets, which can improve upside but deepens recession losses.`);
-  else if (defensiveWeight >= 60) insights.push(`<strong>Capital preservation dominates.</strong> ${defensiveWeight.toFixed(1)}% sits in bonds, inflation hedges, gold, or cash, reducing expected volatility.`);
-  else insights.push(`<strong>The risk mix is balanced.</strong> Growth exposure is paired with ${defensiveWeight.toFixed(1)}% in defensive or diversifying assets.`);
+  insights.push(`<strong>${ranked[0].asset.ticker}</strong> concentra ${ranked[0].weight.toFixed(1)}% del capital, mientras <strong>${riskRanked[0].asset.ticker}</strong> explica ${(riskRanked[0].risk * 100).toFixed(1)}% del riesgo total.`);
+  if (riskRanked[0].risk - riskRanked[0].weight / 100 > 0.12) insights.push(`<strong>Risk budget desalineado:</strong> ${riskRanked[0].asset.name} aporta bastante más riesgo que capital. El portafolio parece más diversificado de lo que realmente está.`);
+  else insights.push(`<strong>Risk budget razonable:</strong> ninguna posición domina de forma extrema el riesgo frente a su peso de capital.`);
 
-  if (metrics.diversificationScore >= 60) insights.push(`<strong>Diversification is doing useful work.</strong> Cross-asset correlations reduce total volatility versus a simple weighted average of standalone risk.`);
-  else insights.push(`<strong>Diversification can improve.</strong> Concentration or correlated growth exposures are limiting the risk reduction from adding more positions.`);
+  if (growthWeight >= 68) insights.push(`<strong>Alta sensibilidad a Growth:</strong> ${growthWeight.toFixed(1)}% está en activos ligados al ciclo y a expansión de múltiplos.`);
+  else if (defensiveWeight >= 62) insights.push(`<strong>Sesgo defensivo:</strong> ${defensiveWeight.toFixed(1)}% está en Treasuries, TIPS, Gold o T-Bills.`);
+  else insights.push(`<strong>Arquitectura balanceada:</strong> Growth y activos defensivos conviven sin que un solo sleeve supere ampliamente al otro.`);
 
+  insights.push(`<strong>Lectura de eficiencia:</strong> Sharpe Ratio de ${metrics.sharpe.toFixed(2)}, beta de ${metrics.beta.toFixed(2)} y ${(metrics.probabilityOfLoss * 100).toFixed(1)}% de probabilidad paramétrica de retorno anual negativo.`);
   return insights;
 }

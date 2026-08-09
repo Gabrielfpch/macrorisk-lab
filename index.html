@@ -1,238 +1,314 @@
 <!doctype html>
-<html lang="en">
+<html lang="es">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#050908" />
     <meta
       name="description"
-      content="MacroRisk Lab — an interactive portfolio risk, macro scenario, and Monte Carlo simulator."
+      content="MacroRisk Lab: portfolio analytics, correlation, efficient frontier, stress testing y Monte Carlo en una sola plataforma cuantitativa."
     />
-    <title>MacroRisk Lab — Portfolio Stress Testing</title>
+    <title>MacroRisk Lab — Portfolio Intelligence</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23b8ff3d'/%3E%3Cpath d='M13 43V21h8l11 13 11-13h8v22h-7V30L32 44 20 30v13z' fill='%23050908'/%3E%3C/svg%3E" />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <div class="ambient ambient-one"></div>
-    <div class="ambient ambient-two"></div>
+    <div class="noise" aria-hidden="true"></div>
+    <div class="glow glow-one" aria-hidden="true"></div>
+    <div class="glow glow-two" aria-hidden="true"></div>
 
     <header class="topbar">
-      <a class="brand" href="#top" aria-label="MacroRisk Lab home">
+      <a class="brand" href="#top" aria-label="MacroRisk Lab — inicio">
         <span class="brand-mark">MR</span>
-        <span>
+        <span class="brand-copy">
           <strong>MacroRisk</strong>
-          <small>Portfolio Lab</small>
+          <small>Portfolio Intelligence</small>
         </span>
       </a>
-      <nav class="topnav" aria-label="Primary navigation">
-        <a href="#builder">Portfolio</a>
-        <a href="#scenarios">Scenarios</a>
-        <a href="#projection">Projection</a>
-        <a href="#methodology">Methodology</a>
+      <nav class="topnav" aria-label="Navegación principal">
+        <a href="#portfolio">Portfolio</a>
+        <a href="#risk-lab">Risk Lab</a>
+        <a href="#correlation">Correlation</a>
+        <a href="#stress-test">Stress Test</a>
+        <a href="#monte-carlo">Monte Carlo</a>
       </nav>
-      <div class="model-status"><span></span> Local model</div>
+      <div class="topbar-status"><i></i><span>100% long-only</span></div>
     </header>
 
     <main id="top">
       <section class="hero">
-        <div class="eyebrow">QUANTITATIVE PORTFOLIO TOOLKIT</div>
-        <h1>See how your portfolio behaves <em>before</em> the market moves.</h1>
-        <p>
-          Build an allocation, measure its risk, test macroeconomic shocks, and
-          explore long-term outcomes with a reproducible Monte Carlo engine.
-        </p>
-        <div class="hero-actions">
-          <a class="primary-button" href="#builder">Build a portfolio</a>
-          <a class="ghost-button" href="#methodology">View methodology</a>
+        <div class="hero-copy">
+          <div class="eyebrow"><span>PORTFOLIO INTELLIGENCE</span><b>MODEL v2.0</b></div>
+          <h1>El riesgo no se adivina.<br /><em>Se modela.</em></h1>
+          <p>
+            Diseña un portfolio, descubre qué activo domina realmente el riesgo y
+            somételo a escenarios macro antes de comprometer capital.
+          </p>
+          <div class="hero-actions">
+            <a class="button button-primary" href="#portfolio">Abrir el modelo <span>↗</span></a>
+            <button class="button button-secondary" id="exportButton" type="button">Exportar snapshot</button>
+          </div>
+          <div class="proof-row">
+            <span><b>8</b> asset classes</span>
+            <span><b>ρ</b> correlation matrix</span>
+            <span><b>3K</b> Monte Carlo paths</span>
+            <span><b>0</b> external APIs</span>
+          </div>
         </div>
-        <div class="hero-proof">
-          <span>7 asset classes</span>
-          <span>5 macro scenarios</span>
-          <span>2,000 simulations</span>
-          <span>No external API</span>
-        </div>
+
+        <aside class="hero-terminal panel">
+          <div class="terminal-head">
+            <span><i></i> LIVE PORTFOLIO SIGNAL</span>
+            <b id="heroProfile">Balanced</b>
+          </div>
+          <div class="terminal-primary">
+            <span>Risk-adjusted return</span>
+            <strong id="heroSharpe">—</strong>
+            <small>Sharpe Ratio</small>
+          </div>
+          <svg id="heroSignalChart" viewBox="0 0 520 150" role="img" aria-label="Señal cuantitativa del portfolio"></svg>
+          <div class="terminal-grid">
+            <div><span>Expected return</span><strong id="heroReturn">—</strong></div>
+            <div><span>Volatility</span><strong id="heroVolatility">—</strong></div>
+            <div><span>Beta</span><strong id="heroBeta">—</strong></div>
+            <div><span>Loss probability</span><strong id="heroLoss">—</strong></div>
+          </div>
+          <div class="terminal-foot"><span>ENGINE</span><b>Covariance · VaR · CVaR · Euler RC</b></div>
+        </aside>
       </section>
 
-      <section class="dashboard-section" id="builder">
+      <div class="market-tape" aria-label="Capacidades cuantitativas">
+        <div class="tape-track">
+          <span>EFFICIENT FRONTIER <b>ACTIVE</b></span><span>RISK BUDGET <b>LIVE</b></span><span>STRESS TEST <b>6 REGIMES</b></span><span>MONTE CARLO <b>3,000 PATHS</b></span><span>CORRELATION <b>8×8</b></span>
+          <span>EFFICIENT FRONTIER <b>ACTIVE</b></span><span>RISK BUDGET <b>LIVE</b></span><span>STRESS TEST <b>6 REGIMES</b></span><span>MONTE CARLO <b>3,000 PATHS</b></span><span>CORRELATION <b>8×8</b></span>
+        </div>
+      </div>
+
+      <section class="section" id="portfolio">
         <div class="section-heading">
           <div>
-            <span class="section-kicker">01 · ALLOCATION</span>
-            <h2>Portfolio builder</h2>
+            <span class="section-number">01 / PORTFOLIO CONSTRUCTION</span>
+            <h2>Construye con restricciones reales.</h2>
           </div>
-          <p>Adjust the weights or start with a model portfolio.</p>
+          <p>Cada cambio rebalancea el resto del portfolio. La suma permanece bloqueada en 100%; no existe capital ficticio.</p>
         </div>
 
-        <div class="dashboard-grid builder-grid">
+        <div class="builder-layout">
           <article class="panel allocation-panel">
-            <div class="panel-toolbar">
-              <div class="preset-group" id="presetButtons" aria-label="Portfolio presets"></div>
-              <button class="small-button" id="normalizeButton" type="button">Normalize to 100%</button>
+            <div class="panel-header">
+              <div>
+                <span class="panel-overline">MODEL PORTFOLIOS</span>
+                <div class="preset-group" id="presetButtons"></div>
+              </div>
+              <div class="allocation-lock"><i>✓</i><span>Capital asignado</span><strong id="weightTotal">100.0%</strong></div>
             </div>
+            <div class="rebalance-note"><span>↔</span> Rebalanceo proporcional automático: al aumentar un activo, los demás reducen su peso.</div>
             <div id="assetControls" class="asset-controls"></div>
-            <div class="allocation-footer">
-              <span>Total allocation</span>
-              <strong id="weightTotal">100.0%</strong>
-            </div>
           </article>
 
           <aside class="panel allocation-visual">
+            <div class="visual-heading"><span>ALLOCATION MAP</span><b id="portfolioLabel">Core 60/40</b></div>
             <div class="donut-wrap">
-              <svg id="allocationDonut" viewBox="0 0 240 240" role="img" aria-label="Portfolio allocation chart"></svg>
-              <div class="donut-label">
-                <span>Portfolio</span>
-                <strong id="portfolioLabel">Balanced</strong>
-              </div>
+              <svg id="allocationDonut" viewBox="0 0 280 280" role="img" aria-label="Distribución del portfolio"></svg>
+              <div class="donut-center"><span>INVESTED</span><strong>100%</strong><small>long-only</small></div>
             </div>
-            <div id="allocationLegend" class="legend"></div>
+            <div id="allocationLegend" class="allocation-legend"></div>
           </aside>
+        </div>
+
+        <div class="metric-grid" aria-label="Métricas principales">
+          <article class="metric-card metric-featured"><span>Expected return</span><strong id="expectedReturn">—</strong><small>annualized assumption</small></article>
+          <article class="metric-card"><span>Volatility</span><strong id="volatility">—</strong><small>annualized σ</small></article>
+          <article class="metric-card"><span>Sharpe Ratio</span><strong id="sharpe">—</strong><small>excess return / risk</small></article>
+          <article class="metric-card"><span>Portfolio Beta</span><strong id="beta">—</strong><small>vs. ACWI</small></article>
+          <article class="metric-card"><span>Value at Risk 95%</span><strong id="valueAtRisk">—</strong><small>one-year parametric</small></article>
+          <article class="metric-card"><span>Conditional VaR</span><strong id="conditionalVaR">—</strong><small>expected tail loss</small></article>
+          <article class="metric-card"><span>Loss probability</span><strong id="lossProbability">—</strong><small>annual normal model</small></article>
+          <article class="metric-card"><span>Stress drawdown</span><strong id="stressDrawdown">—</strong><small>model-based proxy</small></article>
         </div>
       </section>
 
-      <section class="metrics-section" aria-labelledby="metricsTitle">
-        <div class="section-heading compact">
+      <section class="section" id="risk-lab">
+        <div class="section-heading">
           <div>
-            <span class="section-kicker">LIVE ANALYTICS</span>
-            <h2 id="metricsTitle">Risk snapshot</h2>
+            <span class="section-number">02 / RISK LAB</span>
+            <h2>¿Tu portfolio es realmente eficiente?</h2>
           </div>
-          <div class="risk-free-control">
+          <div class="risk-free-input">
             <label for="riskFreeRate">Risk-free rate</label>
             <div><input id="riskFreeRate" type="number" min="0" max="15" step="0.1" value="3.5" /><span>%</span></div>
           </div>
         </div>
-        <div class="metric-grid">
-          <article class="metric-card">
-            <span>Expected return</span>
-            <strong id="expectedReturn">—</strong>
-            <small>Annualized estimate</small>
+
+        <div class="analytics-layout">
+          <article class="panel frontier-panel">
+            <div class="chart-heading">
+              <div><span>MEAN–VARIANCE OPTIMIZATION</span><h3>Efficient Frontier</h3></div>
+              <div class="chart-legend"><span><i class="dot-current"></i>Tu portfolio</span><span><i class="dot-optimal"></i>Max Sharpe</span><span><i class="line-frontier"></i>Frontier</span></div>
+            </div>
+            <svg id="frontierChart" viewBox="0 0 820 410" role="img" aria-label="Frontera eficiente del portfolio"></svg>
+            <div class="frontier-summary">
+              <div><span>Tu Sharpe</span><strong id="currentSharpe">—</strong></div>
+              <div><span>Max Sharpe modelado</span><strong id="maxSharpe">—</strong></div>
+              <div><span>Minimum volatility</span><strong id="minVolatility">—</strong></div>
+            </div>
           </article>
-          <article class="metric-card">
-            <span>Volatility</span>
-            <strong id="volatility">—</strong>
-            <small>Annualized standard deviation</small>
-          </article>
-          <article class="metric-card">
-            <span>Sharpe ratio</span>
-            <strong id="sharpe">—</strong>
-            <small>Excess return per unit of risk</small>
-          </article>
-          <article class="metric-card">
-            <span>95% Value at Risk</span>
-            <strong id="valueAtRisk">—</strong>
-            <small>One-year parametric loss</small>
-          </article>
-          <article class="metric-card">
-            <span>95% Conditional VaR</span>
-            <strong id="conditionalVaR">—</strong>
-            <small>Average loss beyond VaR</small>
-          </article>
-          <article class="metric-card highlight-card">
-            <span>Diversification score</span>
-            <strong id="diversification">—</strong>
-            <small id="diversificationLabel">Portfolio concentration</small>
+
+          <article class="panel factor-panel">
+            <div class="chart-heading">
+              <div><span>MACRO FACTOR LENS</span><h3>Factor exposure</h3></div>
+            </div>
+            <svg id="factorRadar" viewBox="0 0 420 390" role="img" aria-label="Exposición del portfolio a factores macro"></svg>
+            <p>El radar no predice retornos: revela a qué fuentes de riesgo está expuesto el capital.</p>
           </article>
         </div>
       </section>
 
-      <section class="dashboard-section" id="scenarios">
+      <section class="section" id="correlation">
         <div class="section-heading">
           <div>
-            <span class="section-kicker">02 · STRESS TEST</span>
-            <h2>Macroeconomic scenario lab</h2>
+            <span class="section-number">03 / CORRELATION ARCHITECTURE</span>
+            <h2>Diversificar no es contar activos.</h2>
           </div>
-          <p>Estimate how each asset contributes under a defined market shock.</p>
+          <p>La matriz ρ muestra qué posiciones tienden a moverse juntas. Dos ETFs diferentes pueden representar el mismo riesgo.</p>
         </div>
 
-        <div class="scenario-tabs" id="scenarioButtons" role="tablist" aria-label="Macroeconomic scenarios"></div>
-        <div class="dashboard-grid scenario-grid">
+        <div class="correlation-layout">
+          <article class="panel matrix-panel">
+            <div class="chart-heading">
+              <div><span>PAIRWISE CORRELATION</span><h3>Correlation heatmap</h3></div>
+              <div class="heat-legend"><span>−1</span><i></i><span>0</span><b></b><span>+1</span></div>
+            </div>
+            <div id="correlationMatrix" class="correlation-scroll"></div>
+          </article>
+          <aside class="correlation-insights">
+            <article class="panel insight-card"><span>HIGHEST CORRELATION</span><strong id="highestCorrelation">—</strong><p id="highestCorrelationText">—</p></article>
+            <article class="panel insight-card"><span>BEST DIVERSIFIER</span><strong id="bestDiversifier">—</strong><p id="bestDiversifierText">—</p></article>
+            <article class="panel insight-card accent-card"><span>DIVERSIFICATION SCORE</span><strong id="diversification">—</strong><p id="diversificationLabel">—</p></article>
+          </aside>
+        </div>
+      </section>
+
+      <section class="section" id="risk-budget">
+        <div class="section-heading">
+          <div>
+            <span class="section-number">04 / RISK DECOMPOSITION</span>
+            <h2>Capital allocation ≠ risk allocation.</h2>
+          </div>
+          <p>La descomposición de Euler identifica cuánto riesgo aporta cada posición al total del portfolio.</p>
+        </div>
+
+        <div class="risk-budget-layout">
+          <article class="panel risk-budget-panel">
+            <div class="chart-heading">
+              <div><span>EULER DECOMPOSITION</span><h3>Risk contribution</h3></div>
+              <div class="chart-legend"><span><i class="capital-key"></i>Capital</span><span><i class="risk-key"></i>Risk contribution</span></div>
+            </div>
+            <div id="riskBudgetChart" class="risk-budget-chart"></div>
+          </article>
+          <aside class="panel diagnostics-panel">
+            <span class="panel-overline">CONCENTRATION DIAGNOSTICS</span>
+            <div class="diagnostic-list">
+              <div><span>Effective assets</span><strong id="effectiveAssets">—</strong><small>diversificación efectiva</small></div>
+              <div><span>HHI concentration</span><strong id="hhi">—</strong><small>menor es mejor</small></div>
+              <div><span>Correlation benefit</span><strong id="correlationBenefit">—</strong><small>reducción de σ</small></div>
+            </div>
+            <div class="diagnostic-signal" id="riskSignal">—</div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="section" id="stress-test">
+        <div class="section-heading">
+          <div>
+            <span class="section-number">05 / MACRO STRESS TEST</span>
+            <h2>Prueba el portfolio antes del shock.</h2>
+          </div>
+          <p>Seis regímenes hipotéticos traducen shocks por asset class en impacto total y contribución marginal.</p>
+        </div>
+
+        <div class="scenario-tabs" id="scenarioButtons" role="tablist" aria-label="Escenarios macroeconómicos"></div>
+        <div class="scenario-layout">
           <article class="panel scenario-summary">
-            <span class="scenario-code" id="scenarioCode">SCENARIO 01</span>
+            <div class="scenario-meta"><span id="scenarioCode">SCENARIO 01</span><b id="scenarioProbability">Base case</b></div>
             <h3 id="scenarioName">—</h3>
             <p id="scenarioDescription">—</p>
             <div class="scenario-impact">
               <span>Estimated portfolio impact</span>
               <strong id="scenarioImpact">—</strong>
             </div>
-            <div class="scenario-notes" id="scenarioNotes"></div>
+            <div id="scenarioNotes" class="scenario-notes"></div>
           </article>
           <article class="panel contribution-panel">
-            <div class="panel-title-row">
-              <h3>Contribution by asset</h3>
-              <span>percentage points</span>
-            </div>
-            <div id="contributionChart" class="bar-chart"></div>
+            <div class="chart-heading"><div><span>RETURN ATTRIBUTION</span><h3>Contribution by asset</h3></div><small>percentage points</small></div>
+            <div id="contributionChart" class="contribution-chart"></div>
           </article>
         </div>
       </section>
 
-      <section class="dashboard-section" id="projection">
+      <section class="section" id="monte-carlo">
         <div class="section-heading">
           <div>
-            <span class="section-kicker">03 · FORECAST</span>
-            <h2>Long-term capital projection</h2>
+            <span class="section-number">06 / MONTE CARLO ENGINE</span>
+            <h2>Un forecast no es una línea. Es una distribución.</h2>
           </div>
-          <p>Explore a distribution of outcomes, not a single-point forecast.</p>
+          <p>3,000 trayectorias reproducibles combinan retorno, volatility y aportes mensuales para estimar rangos, no promesas.</p>
         </div>
 
-        <div class="dashboard-grid projection-grid">
+        <div class="projection-layout">
           <article class="panel projection-inputs">
-            <label>
-              Initial capital
-              <div class="input-shell"><span>$</span><input id="initialCapital" type="number" min="0" step="100" value="1000" /></div>
-            </label>
-            <label>
-              Monthly contribution
-              <div class="input-shell"><span>$</span><input id="monthlyContribution" type="number" min="0" step="25" value="200" /></div>
-            </label>
-            <label>
-              Investment horizon
-              <div class="input-shell"><input id="horizonYears" type="number" min="1" max="30" step="1" value="10" /><span>years</span></div>
-            </label>
-            <div class="simulation-note">
-              <strong>Reproducible simulation</strong>
-              <p>2,000 seeded paths using monthly lognormal returns and recurring contributions.</p>
-            </div>
+            <span class="panel-overline">SIMULATION PARAMETERS</span>
+            <label>Capital inicial<div class="input-shell"><span>$</span><input id="initialCapital" type="number" min="0" step="100" value="1000" /></div></label>
+            <label>Aporte mensual<div class="input-shell"><span>$</span><input id="monthlyContribution" type="number" min="0" step="25" value="200" /></div></label>
+            <label>Meta de capital<div class="input-shell"><span>$</span><input id="targetCapital" type="number" min="1" step="1000" value="100000" /></div></label>
+            <label>Horizonte<div class="input-shell"><input id="horizonYears" type="number" min="1" max="30" step="1" value="10" /><span>años</span></div></label>
+            <div class="simulation-badge"><i></i><div><strong>Seeded simulation</strong><span>Mismos inputs, mismos resultados.</span></div></div>
           </article>
-          <article class="panel projection-chart-panel">
-            <div class="projection-values">
-              <div><span>Conservative</span><strong id="projectionLow">—</strong><small>10th percentile</small></div>
-              <div class="median"><span>Base range</span><strong id="projectionMedian">—</strong><small>50th percentile</small></div>
-              <div><span>Optimistic</span><strong id="projectionHigh">—</strong><small>90th percentile</small></div>
+
+          <article class="panel projection-panel">
+            <div class="projection-topline">
+              <div><span>P10 · Conservador</span><strong id="projectionLow">—</strong></div>
+              <div class="projection-main"><span>P50 · Base range</span><strong id="projectionMedian">—</strong></div>
+              <div><span>P90 · Optimista</span><strong id="projectionHigh">—</strong></div>
             </div>
-            <svg id="projectionChart" viewBox="0 0 760 280" role="img" aria-label="Projected portfolio value chart"></svg>
+            <svg id="projectionChart" viewBox="0 0 820 330" role="img" aria-label="Distribución proyectada del capital"></svg>
+            <div class="probability-grid">
+              <div><span>Probabilidad de alcanzar la meta</span><strong id="goalProbability">—</strong><div class="probability-track"><i id="goalProbabilityBar"></i></div></div>
+              <div><span>Probabilidad de terminar bajo lo aportado</span><strong id="capitalLossProbability">—</strong><div class="probability-track risk"><i id="capitalLossProbabilityBar"></i></div></div>
+              <div><span>Capital total aportado</span><strong id="investedCapital">—</strong><small>sin performance</small></div>
+            </div>
           </article>
         </div>
       </section>
 
-      <section class="insight-section">
-        <div>
-          <span class="section-kicker">MODEL INTERPRETATION</span>
-          <h2>What the numbers suggest</h2>
+      <section class="investment-memo">
+        <div class="memo-title">
+          <span>INVESTMENT COMMITTEE MEMO</span>
+          <h2>Lo que el modelo está diciendo.</h2>
+          <div class="memo-profile"><span>Risk profile</span><strong id="memoProfile">—</strong></div>
         </div>
-        <div id="insightText" class="insight-text"></div>
+        <div class="memo-insights" id="insightText"></div>
       </section>
 
-      <section class="methodology-section" id="methodology">
+      <section class="section methodology" id="methodology">
         <div class="section-heading">
-          <div>
-            <span class="section-kicker">04 · TRANSPARENCY</span>
-            <h2>Methodology</h2>
-          </div>
-          <p>Every assumption is visible in the source code.</p>
+          <div><span class="section-number">07 / MODEL TRANSPARENCY</span><h2>Sin black box.</h2></div>
+          <p>Todos los supuestos están declarados en el código y cada resultado puede reproducirse.</p>
         </div>
-        <div class="methodology-grid">
-          <article><span>01</span><h3>Expected risk</h3><p>Portfolio return is the weighted average of asset assumptions. Volatility uses a full covariance matrix.</p></article>
-          <article><span>02</span><h3>Tail risk</h3><p>VaR and CVaR use a 95% parametric normal approximation and are displayed as estimated annual losses.</p></article>
-          <article><span>03</span><h3>Macro shocks</h3><p>Scenario returns are transparent, hypothetical shocks rather than claims about future market performance.</p></article>
-          <article><span>04</span><h3>Projection engine</h3><p>Monte Carlo paths use seeded random draws, monthly contributions, and the portfolio's annualized inputs.</p></article>
+        <div class="formula-grid">
+          <article><span>EXPECTED RETURN</span><strong>μ<sub>p</sub> = w′μ</strong><p>Promedio ponderado de los retornos esperados por asset class.</p></article>
+          <article><span>PORTFOLIO RISK</span><strong>σ<sub>p</sub> = √w′Σw</strong><p>Volatility calculada con la matriz completa de covarianzas.</p></article>
+          <article><span>RISK CONTRIBUTION</span><strong>RC<sub>i</sub> = w<sub>i</sub>(Σw)<sub>i</sub> / σ²</strong><p>Participación de cada activo en la varianza total mediante Euler decomposition.</p></article>
+          <article><span>TAIL RISK</span><strong>CVaR<sub>95</sub></strong><p>Pérdida media esperada una vez superado el umbral de Value at Risk.</p></article>
         </div>
-        <p class="disclaimer">
-          Educational tool only. The assumptions are illustrative, are not live market forecasts, and do not constitute investment advice.
-        </p>
+        <p class="disclaimer">Herramienta educativa. Los supuestos son ilustrativos, no utilizan precios en tiempo real y no constituyen recomendación de inversión.</p>
       </section>
     </main>
 
     <footer>
-      <div class="brand footer-brand"><span class="brand-mark">MR</span><span><strong>MacroRisk</strong><small>Portfolio Lab</small></span></div>
-      <p>Built by Gabriel Pérez Chávez · Economics, finance, and code.</p>
-      <a href="#top">Back to top ↑</a>
+      <div class="brand footer-brand"><span class="brand-mark">MR</span><span class="brand-copy"><strong>MacroRisk</strong><small>Portfolio Intelligence</small></span></div>
+      <p>Modelo cuantitativo educativo · Long-only · Fully transparent</p>
+      <span class="signature">Gabriel Pérez</span>
     </footer>
 
     <script type="module" src="app.js"></script>
