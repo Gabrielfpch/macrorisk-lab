@@ -1,0 +1,47 @@
+name: Honora early access
+description: Registra interés en Decision Report, Honora Pro o una alianza.
+title: "Early access: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Gracias por probar Honora. No publiques cifras financieras, información bancaria, correo, teléfono ni otros datos privados en este formulario público.
+  - type: dropdown
+    id: interest
+    attributes:
+      label: ¿Qué te interesa?
+      options:
+        - Decision Report — S/ 9.90
+        - Honora Pro — S/ 19.90 al mes
+        - Alianza comercial / referral
+        - Solo quiero dejar feedback
+    validations:
+      required: true
+  - type: dropdown
+    id: profession
+    attributes:
+      label: Perfil profesional
+      options:
+        - Consultoría
+        - Diseño / marketing
+        - Desarrollo / tecnología
+        - Salud / bienestar
+        - Fotografía / producción
+        - Otro servicio profesional
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Principal problema que quieres resolver
+      description: Describe el problema sin incluir datos financieros privados.
+      placeholder: Por ejemplo, definir mi tarifa o reducir la dependencia de un cliente.
+    validations:
+      required: true
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacidad
+      options:
+        - label: Confirmo que no incluí información financiera ni datos de contacto privados.
+          required: true

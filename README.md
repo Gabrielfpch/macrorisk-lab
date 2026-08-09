@@ -8,6 +8,17 @@ MacroRisk Lab es una experiencia interactiva de `Portfolio Intelligence` para co
 [![GitHub Pages](https://img.shields.io/badge/live-GitHub%20Pages-b8ff3d?style=flat-square&labelColor=07100d)](https://gabrielfpch.github.io/macrorisk-lab/)
 [![Vanilla JS](https://img.shields.io/badge/stack-Vanilla%20JS-4da6ff?style=flat-square&labelColor=07100d)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
 
+## Finance Product Studio
+
+Este repositorio reúne dos productos financieros independientes, cada uno con su propio motor, documentación y validación:
+
+| Producto | Usuario | Propuesta | Acceso |
+|---|---|---|---|
+| **MacroRisk Lab** | Inversionistas y estudiantes de finanzas | Portfolio construction, correlation, risk decomposition y Monte Carlo | [Aplicación pública](https://gabrielfpch.github.io/macrorisk-lab/) |
+| **Honora — Financial OS** | Profesionales independientes | Pricing intelligence, cash runway, revenue risk y plan de 90 días | [Código y plan de negocio](projects/honora-financial-os/README.md) · producto privado |
+
+MacroRisk permanece en la raíz para conservar GitHub Pages. Honora vive dentro de `projects/honora-financial-os` y no modifica el funcionamiento del laboratorio de inversiones.
+
 ## Qué hace diferente a este proyecto
 
 - Mantiene la asignación bloqueada en **100% long-only**. Si un peso sube, los demás se rebalancean proporcionalmente.

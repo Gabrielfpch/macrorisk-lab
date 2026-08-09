@@ -8,7 +8,8 @@ permissions:
   contents: read
 
 jobs:
-  validate:
+  validate-macrorisk:
+    name: MacroRisk Lab
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
@@ -27,3 +28,29 @@ jobs:
 
       - name: Check JavaScript syntax
         run: npm run check
+
+  validate-honora:
+    name: Honora Financial OS
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: projects/honora-financial-os
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: projects/honora-financial-os/package-lock.json
+
+      - name: Install Honora dependencies
+        run: npm ci
+
+      - name: Run Honora model tests
+        run: npm test
+
+      - name: Run Honora lint
+        run: npm run lint
