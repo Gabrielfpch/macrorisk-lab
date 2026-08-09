@@ -13,12 +13,13 @@ export async function POST(request: Request) {
   if (!(await verifyDemoCredentials(username, password))) {
     return json({ error: "Usuario o contraseña incorrectos." }, 401);
   }
+  const secure = new URL(request.url).protocol === "https:" ? "; Secure" : "";
   return new Response(JSON.stringify({ ok: true, redirectTo: "/demo" }), {
     status: 200,
     headers: {
       "content-type": "application/json; charset=utf-8",
       "cache-control": "no-store",
-      "set-cookie": `${DEMO_COOKIE_NAME}=${DEMO_SESSION_TOKEN}; HttpOnly; SameSite=Lax; Path=/; Max-Age=86400`,
+      "set-cookie": `${DEMO_COOKIE_NAME}=${DEMO_SESSION_TOKEN}; HttpOnly; SameSite=Lax; Path=/; Max-Age=86400${secure}`,
     },
   });
 }

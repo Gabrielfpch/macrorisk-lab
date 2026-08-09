@@ -1,4 +1,7 @@
 import Link from "next/link";
+import { getChatGPTUser } from "./chatgpt-auth";
+
+export const dynamic = "force-dynamic";
 
 const workflow = [
   { n: "01", title: "Smart Intake", copy: "Comparte un formulario profesional. Cada respuesta llega al Lead Inbox con contexto, presupuesto y timing." },
@@ -8,12 +11,18 @@ const workflow = [
   { n: "05", title: "13-week Cash", copy: "Mira cómo pipeline y cobros impactan tu liquidez antes de asumir nuevos costos." },
 ];
 
-export default function Home() {
+export default async function Home() {
+  const user = await getChatGPTUser();
+  const accountHref = user ? "/app" : "/login";
+  const accountLabel = user ? "Abrir mi workspace" : "Crear mi cuenta";
+
   return <main className="marketing-page ctc-marketing">
     <header className="marketing-nav">
       <Link className="brand-lockup" href="/" aria-label="Honora, inicio"><span className="brand-mark">H</span><span><strong>HONORA</strong><small>CLIENT-TO-CASH OS</small></span></Link>
       <nav aria-label="Navegación principal"><a href="#flujo">Producto</a><a href="#copilot">Copilot</a><a href="#integraciones">Conexiones</a><a href="#precio">Precio</a></nav>
-      <Link className="button button-dark button-small" href="/app">Crear cuenta <span>↗</span></Link>
+      <div className="marketing-auth-actions">
+        {user ? <Link className="button button-dark button-small" href="/app">Abrir workspace <span>↗</span></Link> : <><Link className="nav-login" href="/login">Iniciar sesión</Link><Link className="button button-dark button-small" href="/login">Crear cuenta <span>↗</span></Link></>}
+      </div>
     </header>
 
     <section className="marketing-hero ctc-hero">
@@ -21,7 +30,7 @@ export default function Home() {
         <div className="eyebrow"><i /> Client-to-Cash OS · Built in Peru</div>
         <h1>De una consulta<br />a <em>dinero cobrado.</em></h1>
         <p>Honora convierte formularios, leads, propuestas y cobros en un solo sistema para profesionales independientes que quieren vender con método y operar con margen.</p>
-        <div className="hero-buttons"><Link className="button button-accent" href="/app">Crear mi cuenta <span>→</span></Link><Link className="text-link" href="/demo/login">Entrar con usuario demo <span>↗</span></Link></div>
+        <div className="hero-buttons"><Link className="button button-accent" href={accountHref}>{accountLabel} <span>→</span></Link>{!user && <Link className="text-link" href="/login">Iniciar sesión <span>↗</span></Link>}<Link className="demo-link-mini" href="/demo/login">Ver demo</Link></div>
         <div className="hero-trust"><span><b>✓</b> Plan Free sin tarjeta</span><span><b>✓</b> Base de datos persistente</span><span><b>✓</b> Workspace privado</span></div>
       </div>
 
@@ -56,7 +65,7 @@ export default function Home() {
 
     <section className="pricing-section-v2 ctc-pricing" id="precio">
       <div className="pricing-intro"><span>PRICE FOR OUTCOME</span><h2>Si Honora no recupera una oportunidad,<br /><em>no merece tu suscripción.</em></h2><p>Empieza gratis. Paga cuando tu pipeline necesite operar sin límites.</p></div>
-      <div className="pricing-cards-v2"><article><div><span>FREE</span><small>Para validar el sistema</small></div><strong>S/ 0</strong><ul><li>1 Smart Intake</li><li>10 leads activos + Fit Score</li><li>2 clientes y 5 receivables</li><li>1 protected quote</li><li>5 preguntas Copilot / mes</li></ul><Link className="button button-outline" href="/app">Empezar gratis →</Link></article><article className="founder-plan"><div className="popular-label">FOUNDING 100</div><div><span>PRO</span><small>Para operar y vender</small></div><strong>S/ 29.90<small>/ mes</small></strong><ul><li>Pipeline y records ilimitados</li><li>Google Forms Bridge</li><li>Honora Copilot ilimitado</li><li>Pricing + Collection Engine</li><li>13-week Cash Forecast</li></ul><Link className="button button-accent" href="/app">Reservar precio fundador →</Link><p>Precio regular proyectado: S/ 49.90. Checkout sujeto a activación comercial.</p></article></div>
+      <div className="pricing-cards-v2"><article><div><span>FREE</span><small>Para validar el sistema</small></div><strong>S/ 0</strong><ul><li>1 Smart Intake</li><li>10 leads activos + Fit Score</li><li>2 clientes y 5 receivables</li><li>1 protected quote</li><li>5 preguntas Copilot / mes</li></ul><Link className="button button-outline" href={accountHref}>Empezar gratis →</Link></article><article className="founder-plan"><div className="popular-label">FOUNDING 100</div><div><span>PRO</span><small>Para operar y vender</small></div><strong>S/ 29.90<small>/ mes</small></strong><ul><li>Pipeline y records ilimitados</li><li>Google Forms Bridge</li><li>Honora Copilot ilimitado</li><li>Pricing + Collection Engine</li><li>13-week Cash Forecast</li></ul><Link className="button button-accent" href={accountHref}>Reservar precio fundador →</Link><p>Precio regular proyectado: S/ 49.90. Checkout sujeto a activación comercial.</p></article></div>
     </section>
 
     <section className="founder-note"><span>BUILT IN PERU</span><blockquote>“Un negocio independiente no pierde dinero por falta de talento; lo pierde cuando una oportunidad no tiene siguiente paso.”</blockquote><p>— Gabriel Pérez Chávez, creador de Honora</p></section>

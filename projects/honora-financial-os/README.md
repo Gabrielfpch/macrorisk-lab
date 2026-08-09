@@ -25,6 +25,7 @@ Honora une captación, CRM, pricing, cobros y cash flow para profesionales indep
 | `/` | Landing comercial Client-to-Cash |
 | `/demo` | Demo interactiva y editable sin persistencia |
 | `/demo/login` | Acceso con credenciales a la experiencia demo |
+| `/login` | Puerta pública para crear una cuenta o volver al mismo workspace |
 | `/app` | Workspace autenticado |
 | `/api/onboarding` | Creación y configuración inicial de la cuenta |
 | `/api/ledger` | Registro de ingresos y gastos conectados |
@@ -73,7 +74,9 @@ npm test
 
 ## Identidad y acceso
 
-La cuenta de producción usa Sign in with ChatGPT y crea el usuario + workspace en D1 durante el primer acceso. Honora no almacena contraseñas de producción. La cuenta demo es un entorno aislado y sin datos reales; sus credenciales existen únicamente para enseñar el recorrido del producto.
+La cuenta de producción usa Sign in with ChatGPT y crea el usuario + workspace en D1 durante el primer acceso. Si el Site está en modo público, cualquier persona con una cuenta de ChatGPT puede registrarse desde `/login`; al volver con el mismo email recupera el mismo workspace. Honora no almacena contraseñas de producción. La cuenta demo es un entorno aislado y sin datos reales; sus credenciales existen únicamente para enseñar el recorrido del producto.
+
+La prueba de integración ejecuta el Worker completo sobre una D1 efímera: confirma registro, aislamiento entre usuarios, persistencia, onboarding, Smart Intake público, leads, importación CSV, conversión, clientes, quotes, invoices, Ledger, estados financieros, Copilot y configuración.
 
 ## Modelo financiero conectado
 

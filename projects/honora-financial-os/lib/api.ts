@@ -26,6 +26,7 @@ export function unauthorized() {
 export function apiError(error: unknown) {
   const known = error as { message?: string; status?: number; code?: string };
   const status = Number.isInteger(known?.status) ? known.status! : 500;
+  if (status >= 500) console.error("[Honora API]", error);
   return json({
     error: status >= 500 ? "No pudimos completar la operación. Intenta otra vez." : known.message,
     code: known.code ?? (status >= 500 ? "SERVER_ERROR" : "BAD_REQUEST"),
