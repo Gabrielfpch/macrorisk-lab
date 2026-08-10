@@ -1,0 +1,126 @@
+{
+  "portfolio_date": "2026-03-30",
+  "profile": "Moderado",
+  "base_investment": 10000,
+  "generated_at": "2026-03-30T19:54:39.980942",
+  "market_context": {
+    "sp500_drawdown_from_ath": "-6%",
+    "key_risk": "Conflicto Irán, petróleo >$99",
+    "leading_sector": "Energía (+20% YTD)",
+    "outlook": "Cautelosamente optimista — earnings +12.5% esperado"
+  },
+  "positions": [
+    {
+      "ticker": "MSFT",
+      "name": "Microsoft Corporation",
+      "sector": "Tecnología",
+      "price": 372.74,
+      "allocation_pct": 15,
+      "dollar_amount": 1500.0,
+      "shares": 4.0243,
+      "risk_level": "Medio",
+      "upside_to_52w_high": 49.02,
+      "rationale": "Líder en IA (Copilot/Azure) y cloud. Cotiza 31% debajo de máximos históricos ($539), ofreciendo punto de entrada atractivo. Forward P/E ~23x razonable para su perfil de crecimiento. Dividendo 0.95%."
+    },
+    {
+      "ticker": "AMZN",
+      "name": "Amazon.com Inc.",
+      "sector": "Tecnología / Consumo Discrecional",
+      "price": 200.33,
+      "allocation_pct": 12,
+      "dollar_amount": 1200.0,
+      "shares": 5.9901,
+      "risk_level": "Medio-Alto",
+      "upside_to_52w_high": 29.09,
+      "rationale": "E-commerce + AWS (cloud #1). Cayó $58 desde máximos ($258.60). Market cap $2.14T. La corrección ofrece descuento en un negocio con crecimiento secular en cloud e IA."
+    },
+    {
+      "ticker": "RTX",
+      "name": "RTX Corporation",
+      "sector": "Defensa / Aeroespacial",
+      "price": 189.71,
+      "allocation_pct": 15,
+      "dollar_amount": 1500.0,
+      "shares": 7.9068,
+      "risk_level": "Medio",
+      "upside_to_52w_high": 13.07,
+      "rationale": "Contrato reciente de $2.01B con la Fuerza Aérea de EE.UU. Beneficiario directo del conflicto con Irán y aumento de gasto en defensa ($924.7B). Analistas ven 15% de upside. Rating 'Overweight' en Morgan Stanley con target $235."
+    },
+    {
+      "ticker": "EOG",
+      "name": "EOG Resources Inc.",
+      "sector": "Energía",
+      "price": 143.21,
+      "allocation_pct": 13,
+      "dollar_amount": 1300.0,
+      "shares": 9.0776,
+      "risk_level": "Medio",
+      "upside_to_52w_high": 0.36,
+      "rationale": "Productor de petróleo y gas con ventajas de costos (moat). Sector energía +20% YTD, liderando el mercado en 2026. Petróleo >$99/barril por conflicto Irán. Retorna >70% del FCF a accionistas. Cerca de máximos históricos. Consenso 'Buy'."
+    },
+    {
+      "ticker": "PG",
+      "name": "Procter & Gamble Co.",
+      "sector": "Consumo Defensivo",
+      "price": 143.73,
+      "allocation_pct": 12,
+      "dollar_amount": 1200.0,
+      "shares": 8.349,
+      "risk_level": "Bajo",
+      "upside_to_52w_high": 21.62,
+      "rationale": "Ancla defensiva del portafolio. Marcas esenciales (Gillette, Tide, Pampers). Cayó 5.9% en 6 días — oportunidad de entrada. Analistas proyectan recuperación a $165-175 si consumo se mantiene. Dividendo creciente por décadas. Wide moat (Morningstar)."
+    },
+    {
+      "ticker": "JPM",
+      "name": "JPMorgan Chase & Co.",
+      "sector": "Financiero",
+      "price": 282.84,
+      "allocation_pct": 13,
+      "dollar_amount": 1300.0,
+      "shares": 4.5962,
+      "risk_level": "Medio",
+      "upside_to_52w_high": 19.24,
+      "rationale": "Banco más grande de EE.UU. con +18.59% en el último año. Retrocedió desde máximos ($334.61) ofreciendo descuento. 33 analistas con consenso alcista, target mediano $345. Exposición a financiero diversifica el portafolio."
+    },
+    {
+      "ticker": "NEE",
+      "name": "NextEra Energy Inc.",
+      "sector": "Utilities / Energía Renovable",
+      "price": 91.4,
+      "allocation_pct": 10,
+      "dollar_amount": 1000.0,
+      "shares": 10.9409,
+      "risk_level": "Bajo",
+      "upside_to_52w_high": 4.93,
+      "rationale": "Combina utilidad regulada con energía renovable. Defensiva con crecimiento moderado. Market cap $187B. Cerca de máximos ($95.03). Baja correlación con tech — reduce volatilidad del portafolio."
+    },
+    {
+      "ticker": "MU",
+      "name": "Micron Technology Inc.",
+      "sector": "Semiconductores / IA",
+      "price": 322.19,
+      "allocation_pct": 10,
+      "dollar_amount": 1000.0,
+      "shares": 3.1038,
+      "risk_level": "Alto",
+      "upside_to_52w_high": 46.29,
+      "rationale": "Proveedor clave de chips HBM para centros de datos de IA. Revenue +196% y EPS +682% YoY en Q2 2026. Alta volatilidad pero enorme momentum secular. Corrección reciente desde $461 crea oportunidad. Posición pequeña acorde al riesgo."
+    }
+  ],
+  "sector_breakdown": {
+    "Tecnología": 15,
+    "Defensa / Aeroespacial": 15,
+    "Energía": 13,
+    "Financiero": 13,
+    "Tecnología / Consumo Discrecional": 12,
+    "Consumo Defensivo": 12,
+    "Utilities / Energía Renovable": 10,
+    "Semiconductores / IA": 10
+  },
+  "risk_breakdown": {
+    "Medio": 56,
+    "Medio-Alto": 12,
+    "Bajo": 22,
+    "Alto": 10
+  }
+}
